@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup / Editor de Textos - Ordem Paranormal</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Outfit:wght@300;400;600;800&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" />
+
+<!-- Reaproveita o CSS original do jogo para manter a aparência idêntica -->
+<link rel="stylesheet" href="../index.css">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+
+<div class="editor-shell">
+
+    <!-- ==================== PAINEL EDITOR (ESQUERDA) ==================== -->
+    <aside class="editor-panel">
+        <div class="editor-panel-header">
+            <h1>Editor de Textos</h1>
+            <p>Ordem Paranormal &mdash; Quiz de Cenas</p>
+            <div class="editor-actions">
+                <button id="btn-export" class="ed-btn">Exportar JSON</button>
+                <button id="btn-reset" class="ed-btn ed-btn-danger">Restaurar Originais</button>
+            </div>
+            <p id="save-indicator" class="save-indicator">&nbsp;</p>
+        </div>
+        <div id="editor-form" class="editor-form"><!-- gerado via JS --></div>
+    </aside>
+
+    <!-- ==================== PRÉ-VISUALIZAÇÃO (DIREITA) ==================== -->
+    <main class="preview-stage">
+
+        <div class="preview-toolbar">
+            <div class="toolbar-group">
+                <label>Tela</label>
+                <select id="sel-screen">
+                    <option value="intro">Tela Inicial</option>
+                    <option value="game">Jogo (Cena)</option>
+                    <option value="reveal">Revelação (Resultado da Rodada)</option>
+                    <option value="gameover">Fim de Jogo (Relatório Final)</option>
+                    <option value="modal-daily">Modal - Relatório do Dia</option>
+                    <option value="modal-calendar">Modal - Calendário / Histórico</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group" id="group-reveal-variant">
+                <label>Variante do Resultado</label>
+                <select id="sel-reveal-variant">
+                    <option value="correct">Acertou a rodada</option>
+                    <option value="wrong">Errou a rodada</option>
+                    <option value="last-round">Última rodada (botão "Ver Resultados")</option>
+                    <option value="duel-win">Duelo: você venceu a rodada</option>
+                    <option value="duel-lose">Duelo: oponente venceu a rodada</option>
+                    <option value="duel-tie">Duelo: empate (os dois erraram)</option>
+                    <option value="duel-timeout">Duelo: tempo esgotado</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group" id="group-game-status">
+                <label>Status do Player (Jogo)</label>
+                <select id="sel-game-status">
+                    <option value="statusDefault">Inicial</option>
+                    <option value="statusTuning">Ajustando sintonizador</option>
+                    <option value="statusTuningMystic">Sintonizando transmissão</option>
+                    <option value="statusMonitoring">Monitorando (tocando)</option>
+                    <option value="statusReady">Calibrado / pronto</option>
+                    <option value="statusPaused">Pausado</option>
+                    <option value="statusReplay">Reassistindo</option>
+                    <option value="statusHintActive">Dica ativa</option>
+                    <option value="statusSignalCut">Sinal cortado (acabou o tempo)</option>
+                    <option value="statusError">Erro no monitor</option>
+                    <option value="statusCorrupted">Monitor corrompido</option>
+                </select>
+            </div>
+            <div class="toolbar-group" id="group-game-loading">
+                <label>Overlay do Vídeo</label>
+                <select id="sel-game-loading">
+                    <option value="none">Vídeo normal</option>
+                    <option value="loading">Carregando (SINTONIZANDO FITA)</option>
+                    <option value="signal-lost">Sinal cortado (tempo esgotado)</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group" id="group-gameover-mode">
+                <label>Modo (Fim de Jogo)</label>
+                <select id="sel-gameover-mode">
+                    <option value="daily">Diário</option>
+                    <option value="classic">Clássico</option>
+                    <option value="infinite">Infinito</option>
+                    <option value="duel">Duelo</option>
+                </select>
+            </div>
+            <div class="toolbar-group" id="group-gameover-tier">
+                <label>Faixa de Acertos / Resultado</label>
+                <select id="sel-gameover-tier"></select>
+            </div>
+
+            <div class="toolbar-group" id="group-intro-campaign-count">
+                <label>Seleção de Temporadas</label>
+                <select id="sel-intro-campaign-count">
+                    <option value="all">Todas selecionadas</option>
+                    <option value="one">Uma única selecionada</option>
+                    <option value="multi">Várias selecionadas</option>
+                    <option value="none">Nenhuma selecionada</option>
+                </select>
+            </div>
+            <div class="toolbar-group" id="group-intro-mode-view">
+                <label>Painel de Modos</label>
+                <select id="sel-intro-mode-view">
+                    <option value="daily">Modo Diário (padrão)</option>
+                    <option value="others">Outros Modos (Clássico/Infinito/Duelo)</option>
+                    <option value="multiplayer-create">Painel Duelo - aguardando (host)</option>
+                    <option value="multiplayer-join">Painel Duelo - conectado (guest)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="preview-frame-wrapper">
+            <div class="preview-frame">
+
+                <div class="paranormal-glow purple"></div>
+                <div class="paranormal-glow cyan"></div>
+
+                <div class="app-container">
+
+                    <!-- ==================== TELA INICIAL ==================== -->
+                    <section id="screen-intro" class="screen active">
+                        <div class="logo-area">
+                            <h1 class="main-title" id="p-intro-mainTitle">FRAGMENTOS DA MEMBRANA</h1>
+                            <div class="subtitle" id="p-intro-subtitle">Selecione uma Campanha</div>
+                            <div class="symbol-ornament">
+                                <svg viewBox="0 0 100 20" width="160" height="30" fill="none" stroke="currentColor">
+                                    <path d="M10,10 L45,10 L50,5 L55,10 L90,10" stroke-width="2" opacity="0.6"/>
+                                    <circle cx="50" cy="10" r="4" fill="currentColor"/>
+                                    <circle cx="50" cy="10" r="8" stroke-width="1"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="intro-description" id="p-intro-desc"></div>
+
+                        <div class="campaign-container card" id="p-campaign-container">
+                            <h2 class="section-title" id="p-intro-campaignsSectionTitle"></h2>
+                            <p class="campaign-hint" id="p-intro-campaignHint"></p>
+                            <div class="campaign-selector" id="p-campaign-selector"><!-- gerado via JS --></div>
+                        </div>
+
+                        <div class="options-container card">
+                            <h2 class="section-title" id="p-intro-modeSectionTitle"></h2>
+
+                            <div id="p-mode-view-daily" class="mode-view active">
+                                <div class="daily-header-row" style="display:flex;justify-content:flex-end;margin-bottom:0.55rem;">
+                                    <button class="btn-calendar-trigger"><span class="material-symbols-outlined icon-inline">calendar_month</span> <span id="p-intro-historyBtn"></span></button>
+                                </div>
+                                <button class="btn-mode active daily-mode-card">
+                                    <div class="mode-badge"><span class="material-symbols-outlined icon-inline" style="font-size:0.85rem;color:#f59e0b;">bolt</span> <span id="p-intro-dailyBadge"></span></div>
+                                    <div class="mode-title"><span class="icon"><span class="material-symbols-outlined">calendar_month</span></span> <span id="p-intro-dailyTitle"></span></div>
+                                    <p class="mode-desc" id="p-intro-dailyDesc"></p>
+                                </button>
+                                <button class="btn-secondary" style="margin-top:1rem;width:100%;">
+                                    <span class="material-symbols-outlined icon-inline">magic_button</span> <span id="p-intro-btnShowOtherModes"></span>
+                                </button>
+                            </div>
+
+                            <div id="p-mode-view-others" class="mode-view" style="display:none;">
+                                <div class="others-header" style="margin-bottom:1rem;">
+                                    <button class="btn-back-arrow" id="p-intro-btnBackToDaily"></button>
+                                </div>
+                                <div class="mode-selector">
+                                    <button class="btn-mode mode-square">
+                                        <span class="mode-icon"><span class="material-symbols-outlined">trophy</span></span>
+                                        <div class="mode-title" id="p-intro-classicTitle"></div>
+                                        <p class="mode-desc" id="p-intro-classicDesc"></p>
+                                    </button>
+                                    <button class="btn-mode mode-square">
+                                        <span class="mode-icon"><span class="material-symbols-outlined">all_inclusive</span></span>
+                                        <div class="mode-title" id="p-intro-infiniteTitle"></div>
+                                        <p class="mode-desc" id="p-intro-infiniteDesc"></p>
+                                    </button>
+                                    <button class="btn-mode mode-locked" disabled aria-disabled="true">
+                                        <div class="mode-badge locked-badge"><span class="material-symbols-outlined icon-inline" style="font-size:0.8rem;">lock</span> <span id="p-intro-duelBadge"></span></div>
+                                        <div class="mode-title"><span class="icon"><span class="material-symbols-outlined">swords</span></span> <span id="p-intro-duelTitle"></span></div>
+                                        <p class="mode-desc" id="p-intro-duelDesc"></p>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="p-multiplayer-panel" class="card" style="display:none;">
+                            <h2 class="section-title"><span class="material-symbols-outlined icon-inline" style="vertical-align:text-bottom;">swords</span> <span id="p-intro-multiplayerTitle"></span></h2>
+                            <div class="multiplayer-options">
+                                <div class="multi-col">
+                                    <h3 id="p-intro-createRoomTitle"></h3>
+                                    <p class="multi-info" id="p-intro-createRoomInfo"></p>
+                                    <button class="btn-secondary" id="p-intro-btnCreateLobby"></button>
+                                </div>
+                                <div class="multi-divider" id="p-intro-orDivider"></div>
+                                <div class="multi-col">
+                                    <h3 id="p-intro-joinRoomTitle"></h3>
+                                    <p class="multi-info" id="p-intro-joinRoomInfo"></p>
+                                    <div class="code-input-row">
+                                        <input type="text" class="code-input" maxlength="4" id="p-intro-codeInputPlaceholder">
+                                        <button class="btn-secondary" id="p-intro-btnJoinLobby"></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="lobby-status-box" id="p-lobby-status-box" style="display:none;">
+                                <div class="lobby-status-msg" id="p-lobby-status-msg"></div>
+                                <div class="lobby-code-display"><span id="p-intro-lobbyCodeLabel"></span> <span class="room-code-badge">4F9C</span></div>
+                                <div class="opponent-name-tag" id="p-lobby-opponent-tag" style="display:none;"><span id="p-intro-opponentStatusLabel"></span> <span class="glowing-purple" id="p-lobby-opponent-status"></span></div>
+                            </div>
+                        </div>
+
+                        <button class="btn-primary pulse-btn"><span id="p-intro-btnStartGame"></span></button>
+                    </section>
+
+                    <!-- ==================== TELA DE JOGO ==================== -->
+                    <section id="screen-game" class="screen">
+                        <div class="game-hud">
+                            <div class="hud-item flex-col">
+                                <span class="hud-label" id="p-game-labelRoundType"></span>
+                                <span class="hud-value">3/10</span>
+                            </div>
+                            <div class="hud-item flex-col">
+                                <span class="hud-label" id="p-game-labelScore"></span>
+                                <span class="hud-value glowing-purple">1450</span>
+                            </div>
+                            <div class="hud-item flex-col">
+                                <span class="hud-label" id="p-game-labelSanity"></span>
+                                <div class="sanity-hearts">
+                                    <span class="material-symbols-outlined heart active">water_drop</span>
+                                    <span class="material-symbols-outlined heart active">water_drop</span>
+                                    <span class="material-symbols-outlined heart active">water_drop</span>
+                                </div>
+                            </div>
+                            <div class="hud-item flex-col">
+                                <span class="hud-label" id="p-game-labelStreak"></span>
+                                <span class="hud-value">2x <span class="material-symbols-outlined" style="color:#ef4444;vertical-align:text-bottom;font-size:1.15rem;">local_fire_department</span></span>
+                            </div>
+                        </div>
+
+                        <div class="video-panel card">
+                            <div class="monitor-frame">
+                                <div class="monitor-bezel">
+                                    <div class="monitor-screen-wrapper">
+                                        <div class="crt-scanlines"></div>
+                                        <div class="crt-glow-overlay"></div>
+
+                                        <div class="video-loading-overlay" id="p-video-loading-screen" style="display:none;">
+                                            <div class="static-noise"></div>
+                                            <div class="loading-glow"></div>
+                                            <div class="loading-text-wrapper">
+                                                <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--color-morte);animation:spin 1.5s linear infinite;margin-bottom:0.5rem;">sync</span>
+                                                <div class="loading-main-text" id="p-game-loadingText"></div>
+                                            </div>
+                                        </div>
+
+                                        <div id="youtube-player-container" style="width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;color:#444;font-size:0.75rem;">
+                                            (pré-visualização do vídeo)
+                                        </div>
+
+                                        <div class="video-shield-top">
+                                            <span class="shield-text">🔴</span>
+                                            <span class="shield-status">7.4s</span>
+                                        </div>
+
+                                        <div class="signal-lost-overlay" id="p-signal-lost-screen" style="display:none;">
+                                            <div class="static-noise"></div>
+                                            <div class="lost-glow"></div>
+                                            <div class="lost-text-wrapper">
+                                                <div class="lost-icon"><span class="material-symbols-outlined" style="font-size:2.5rem;color:#f59e0b;">warning</span></div>
+                                                <div class="lost-main-text" id="p-game-signalLostTitle"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="audio-player-ui">
+                                <div class="status-msg-container">
+                                    <span class="loading-dots" id="p-game-status"></span>
+                                </div>
+                                <div class="custom-audio-controls">
+                                    <button class="btn-audio-control material-symbols-outlined">pause</button>
+                                    <button class="btn-audio-control material-symbols-outlined" id="p-game-btnReplayTitle" title=""><span class="material-symbols-outlined">replay</span></button>
+                                    <div class="time-progress">
+                                        <span>0:03</span>
+                                        <div class="progress-bar-container"><div class="progress-bar-fill" style="width:35%;"></div></div>
+                                        <span>0:10</span>
+                                    </div>
+                                </div>
+                                <div class="hint-panel">
+                                    <div class="hint-btn-row">
+                                        <button class="btn-hint" id="p-game-btnHint" disabled></button>
+                                        <span class="hint-info-icon material-symbols-outlined" tabindex="0">help</span>
+                                        <div class="hint-tooltip" id="p-game-hintText"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="timer-container">
+                            <div class="timer-bar" style="width:60%;"></div>
+                        </div>
+
+                        <div class="options-quiz-wrapper">
+                            <div class="quiz-instruction" id="p-game-quizInstruction"></div>
+                            <div class="options-grid">
+                                <button class="btn-option"><span class="opt-num">1</span><span class="opt-text">Ep 1 - Receptáculo</span></button>
+                                <button class="btn-option"><span class="opt-num">2</span><span class="opt-text">Ep 2 - O Circo</span></button>
+                                <button class="btn-option correct"><span class="opt-num">3</span><span class="opt-text">Ep 3 - A Coroa</span></button>
+                                <button class="btn-option"><span class="opt-num">4</span><span class="opt-text">Ep 4 - Espinhos</span></button>
+                            </div>
+                        </div>
+
+                        <div class="game-footer">
+                            <button class="btn-text" id="p-game-btnQuit"></button>
+                        </div>
+                    </section>
+
+                    <!-- ==================== TELA DE REVELAÇÃO (RESULTADO) ==================== -->
+                    <section id="screen-reveal" class="screen">
+                        <div class="reveal-result-banner correct" id="p-reveal-banner">
+                            <span class="reveal-icon" id="p-reveal-icon">✓</span>
+                            <h2 class="reveal-title" id="p-reveal-title"></h2>
+                            <div class="reveal-subtitle" id="p-reveal-subtitle"></div>
+                        </div>
+
+                        <div class="reveal-details card">
+                            <div class="element-icon-background material-symbols-outlined">skull</div>
+                            <h3 class="section-title" id="p-reveal-detailsTitle"></h3>
+                            <div class="reveal-context" id="p-reveal-context">
+                                <div class="reveal-context-label" id="p-reveal-contextLabel"></div>
+                                <p class="reveal-context-text" id="p-reveal-contextExample"></p>
+                            </div>
+                            <a href="#" class="btn-link" id="p-reveal-btnWatchYoutube"></a>
+                        </div>
+
+                        <button class="btn-primary"><span id="p-reveal-btnNext"></span></button>
+                    </section>
+
+                    <!-- ==================== TELA DE FIM DE JOGO ==================== -->
+                    <section id="screen-gameover" class="screen">
+                        <div class="gameover-header">
+                            <div class="skull-glowing"><img src="../assets/img/medo.png" alt="Símbolo do Medo" class="medo-symbol-img"></div>
+                            <h2 class="gameover-title" id="p-gameover-title"></h2>
+                            <p class="gameover-subtitle" id="p-gameover-cause"></p>
+                        </div>
+
+                        <div class="stats-summary card">
+                            <h3 class="section-title">DADOS COLETADOS</h3>
+                            <div class="stats-grid">
+                                <div class="stat-box stat-box-featured"><span class="stat-val" id="p-gameover-accuracyValue">8/10</span><span class="stat-lbl" id="p-gameover-lblAccuracy"></span></div>
+                                <div class="stat-box"><span class="stat-val">5x <span class="material-symbols-outlined" style="color:#ef4444;vertical-align:text-bottom;font-size:1.15rem;">local_fire_department</span></span><span class="stat-lbl" id="p-gameover-lblStreak"></span></div>
+                                <div class="stat-box"><span class="stat-val">11.6s</span><span class="stat-lbl" id="p-gameover-lblAvgTime"></span></div>
+                            </div>
+                            <div class="rank-container">
+                                <span class="rank-label" id="p-gameover-rankSectionLabel"></span>
+                                <div class="rank-badge" id="p-gameover-rank"></div>
+                                <p class="rank-desc" id="p-gameover-rankDesc"></p>
+                            </div>
+                        </div>
+
+                        <div class="gameover-actions">
+                            <button class="btn-primary" id="p-gameover-btnRetry-wrap"><span id="p-gameover-btnRetry"></span></button>
+                            <button class="btn-secondary"><span id="p-gameover-btnHome"></span></button>
+                        </div>
+                    </section>
+
+                </div>
+
+                <!-- Modal de Resultados do Dia -->
+                <div id="p-daily-result-modal" class="modal-wrapper" style="display:none;">
+                    <div class="modal-content card">
+                        <span class="modal-close-btn">&times;</span>
+                        <h3 class="modal-title" id="p-modal-dailyResultTitle"></h3>
+                        <div class="modal-divider"></div>
+                        <div class="modal-body">
+                            <div style="text-align:center;margin-bottom:1.5rem;">
+                                <img src="../assets/img/medo.png" alt="" style="width:55px;height:55px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,255,255,0.85));margin-bottom:0.5rem;">
+                                <div style="font-size:0.75rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:2px;" id="p-modal-dailyResultHeader"></div>
+                            </div>
+                            <div style="background:rgba(139,92,246,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:1rem;text-align:center;margin-bottom:0.75rem;">
+                                <div style="font-size:1.75rem;font-weight:800;color:#fff;">5/6</div>
+                                <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;margin-top:2px;" id="p-modal-dailyStatAccuracy"></div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.75rem;margin-bottom:1.5rem;">
+                                <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:0.75rem;text-align:center;">
+                                    <div style="font-size:1.25rem;font-weight:800;color:#fff;">4x 🔥</div>
+                                    <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;margin-top:2px;" id="p-modal-dailyStatStreak"></div>
+                                </div>
+                                <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:0.75rem;text-align:center;">
+                                    <div style="font-size:1.25rem;font-weight:800;color:#fff;">10.2s</div>
+                                    <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;margin-top:2px;" id="p-modal-dailyStatAvgTime"></div>
+                                </div>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:1rem;text-align:center;">
+                                <div style="font-family:var(--font-primary);font-weight:800;font-size:0.95rem;color:#fff;letter-spacing:1px;margin-bottom:0.5rem;" id="p-modal-dailyResultRank"></div>
+                                <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.4;" id="p-modal-dailyResultDesc"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal do Calendário -->
+                <div id="p-calendar-modal" class="modal-wrapper" style="display:none;">
+                    <div class="modal-content card calendar-modal-content">
+                        <span class="modal-close-btn">&times;</span>
+                        <h3 class="modal-title" id="p-modal-calendarTitle"></h3>
+                        <div class="modal-divider"></div>
+                        <div class="calendar-header">
+                            <button class="calendar-nav-btn">&larr;</button>
+                            <span class="calendar-month-year">Janeiro 2026</span>
+                            <button class="calendar-nav-btn">&rarr;</button>
+                        </div>
+                        <div class="calendar-weekdays">
+                            <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+                        </div>
+                        <div class="calendar-days-grid" id="p-calendar-days-grid"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="content.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

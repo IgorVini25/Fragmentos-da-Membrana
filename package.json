@@ -1,0 +1,28 @@
+{
+  "name": "ordem-paranormal-scene-quiz",
+  "version": "1.0.0",
+  "description": "Um quiz interativo de cenas de 10 segundos dos episódios de Ordem Paranormal: Hexatombe",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "node scripts/build-public.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "keywords": [
+    "rpg",
+    "ordem-paranormal",
+    "quiz",
+    "scene-quiz",
+    "video",
+    "multiplayer",
+    "hexatombe"
+  ],
+  "author": "Antigravity AI",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,9 @@
+# Gerado pelo build da Vercel (scripts/build-public.js)
+public/
+
+# Segredos: nunca subir
+.env
+.env.*
+
+node_modules/
+.vercel/

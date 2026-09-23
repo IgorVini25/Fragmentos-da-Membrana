@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fragmentos da Membrana - Quiz de Cenas de Ordem Paranormal</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Outfit:wght@300;400;600;800&family=Special+Elite&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="index.css">
+    <link rel="icon" type="image/png" href="assets/Ordem_Paranormal_Selo_Branco.png">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" />
+</head>
+<body>
+    <!-- Selo Ordem Paranormal Fixo -->
+    <img src="assets/Ordem_Paranormal_Selo_Branco.png" alt="Selo Ordem Paranormal" class="fixed-seal" id="fixed-seal-logo">
+
+    <!-- Partículas de Fundo -->
+    <canvas id="ambient-particles"></canvas>
+
+    <!-- Fundo Dividido das Temporadas Selecionadas (fatias que se misturam) -->
+    <div id="season-blend-bg" aria-hidden="true"></div>
+
+    <!-- Elementos Decorativos -->
+    <div class="paranormal-glow purple"></div>
+    <div class="paranormal-glow cyan"></div>
+
+    <div class="app-container">
+        <!-- ==================== TELA INICIAL ==================== -->
+        <section id="screen-intro" class="screen active">
+            <div class="logo-area">
+                <h1 class="main-title" id="app-main-title">FRAGMENTOS DA MEMBRANA</h1>
+                <div class="subtitle" id="app-season-subtitle">Selecione uma Campanha</div>
+                <div class="symbol-ornament">
+                    <svg viewBox="0 0 100 20" width="160" height="30" fill="none" stroke="currentColor">
+                        <path d="M10,10 L45,10 L50,5 L55,10 L90,10" stroke-width="2" opacity="0.6"/>
+                        <circle cx="50" cy="10" r="4" fill="currentColor"/>
+                        <circle cx="50" cy="10" r="8" stroke-width="1"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="intro-description" id="intro-description">
+                Assista a um trecho de <strong>10 segundos</strong> de um episódio de cada temporada e adivinhe qual é o episódio.
+            </div>
+
+            <div class="campaign-container card" id="campaign-selection-container" style="display: none;">
+                <h2 class="section-title">Escolha as Temporadas</h2>
+                <p class="campaign-hint" id="campaign-hint">Todas as temporadas começam selecionadas. Clique para remover as que não quiser na investigação.</p>
+                <div class="campaign-selector">
+                    <button class="btn-campaign" data-campaign="osnf" id="btn-camp-osnf">
+                        <div class="campaign-title">O SEGREDO NA FLORESTA</div>
+                        <p class="campaign-desc">16 Episódios</p>
+                    </button>
+                    <button class="btn-campaign" data-campaign="deconjuracao" id="btn-camp-deconjuracao">
+                        <div class="campaign-title">DESCONJURAÇÃO</div>
+                        <p class="campaign-desc">20 Episódios</p>
+                    </button>
+                    <button class="btn-campaign" data-campaign="calamidade" id="btn-camp-calamidade">
+                        <div class="campaign-title">CALAMIDADE</div>
+                        <p class="campaign-desc">13 Episódios</p>
+                    </button>
+                    <button class="btn-campaign" data-campaign="osni" id="btn-camp-osni">
+                        <div class="campaign-title">O SEGREDO NA ILHA</div>
+                        <p class="campaign-desc">8 Episódios</p>
+                    </button>
+                    <button class="btn-campaign" data-campaign="sdol" id="btn-camp-sdol">
+                        <div class="campaign-title">SINAIS DO OUTRO LADO</div>
+                        <p class="campaign-desc">7 Episódios</p>
+                    </button>
+                    <button class="btn-campaign" data-campaign="hexatombe" id="btn-camp-hexatombe">
+                        <div class="campaign-title">HEXATOMBE</div>
+                        <p class="campaign-desc">10 Episódios</p>
+                    </button>
+                </div>
+            </div>
+
+            <div class="options-container card">
+                <h2 class="section-title">Escolha o Modo de Jogo</h2>
+                
+                <!-- View do Modo Diário (Ativo por padrão) -->
+                <div id="mode-view-daily" class="mode-view active">
+                    <div class="daily-header-row" style="display: flex; justify-content: flex-end; margin-bottom: 0.55rem;">
+                        <button id="btn-open-calendar" class="btn-calendar-trigger" title="Linha do tempo diária">
+                            <span class="material-symbols-outlined icon-inline">calendar_month</span> Histórico de Desafios
+                        </button>
+                    </div>
+                    <button class="btn-mode active daily-mode-card" data-mode="daily" id="btn-mode-daily">
+                        <div class="mode-badge"><span class="material-symbols-outlined icon-inline" style="font-size: 0.85rem; color: #f59e0b;">bolt</span> RECOMENDADO</div>
+                        <div class="mode-title">
+                            <span class="icon"><span class="material-symbols-outlined">calendar_month</span></span> Modo Diário
+                        </div>
+                        <p class="mode-desc">6 cenas por dia, uma de cada temporada. As cenas são as mesmas para todos os agentes.</p>
+                    </button>
+                    
+                    <button id="btn-show-other-modes" class="btn-secondary" style="margin-top: 1rem; width: 100%;">
+                        <span class="material-symbols-outlined icon-inline">magic_button</span> Ver Outros Modos de Jogo
+                    </button>
+                </div>
+
+                <!-- View de Outros Modos (Oculto inicialmente) -->
+                <div id="mode-view-others" class="mode-view" style="display: none;">
+                    <div class="others-header" style="margin-bottom: 1rem;">
+                        <button id="btn-back-to-daily" class="btn-back-arrow">
+                            ← Voltar ao Modo Diário
+                        </button>
+                    </div>
+                    <div class="mode-selector">
+                        <button class="btn-mode mode-square" data-mode="classic" id="btn-mode-classic">
+                            <span class="mode-icon"><span class="material-symbols-outlined">trophy</span></span>
+                            <div class="mode-title">Modo Clássico</div>
+                            <p class="mode-desc">10 cenas de temporadas aleatórias. Seu rank depende de quantas você acertar.</p>
+                        </button>
+
+                        <button class="btn-mode mode-square" data-mode="infinite" id="btn-mode-infinite">
+                            <span class="mode-icon"><span class="material-symbols-outlined">all_inclusive</span></span>
+                            <div class="mode-title">Modo Infinito</div>
+                            <p class="mode-desc">Cenas sem limite. Encerre quando quiser: o rank é calculado pela proporção de acertos.</p>
+                        </button>
+
+                        <button class="btn-mode mode-locked" data-mode="duel" id="btn-mode-duel" disabled aria-disabled="true">
+                            <div class="mode-badge locked-badge">
+                                <span class="material-symbols-outlined icon-inline" style="font-size: 0.8rem;">lock</span> EM DESENVOLVIMENTO
+                            </div>
+                            <div class="mode-title">
+                                <span class="icon"><span class="material-symbols-outlined">swords</span></span> Modo Duelo (Multiplayer)
+                            </div>
+                            <p class="mode-desc">Dispute as mesmas cenas em tempo real contra outro agente.</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Painel de Conexão Multiplayer (Modo Duelo) -->
+            <div id="multiplayer-panel" class="card" style="display: none;">
+                <h2 class="section-title"><span class="material-symbols-outlined icon-inline" style="vertical-align: text-bottom;">swords</span> Conexão do Duelo Paranormal</h2>
+                
+                <div class="multiplayer-options">
+                    <div class="multi-col">
+                        <h3>Criar uma Sala (Host)</h3>
+                        <p class="multi-info">Você inicia o lobby. As cenas e tempos de início serão sincronizados a partir da sua tela.</p>
+                        <button id="btn-create-lobby" class="btn-secondary">Criar Sala</button>
+                    </div>
+                    
+                    <div class="multi-divider">ou</div>
+                    
+                    <div class="multi-col">
+                        <h3>Entrar em uma Sala (Convidado)</h3>
+                        <p class="multi-info">Insira o código de 4 dígitos fornecido pelo Host para conectar-se.</p>
+                        <div class="code-input-row">
+                            <input type="text" id="lobby-code-input" placeholder="Código" maxlength="4" class="code-input">
+                            <button id="btn-join-lobby" class="btn-secondary">Entrar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status da Sala -->
+                <div id="lobby-status-box" class="lobby-status-box" style="display: none;">
+                    <div class="lobby-status-msg" id="lobby-status-msg">Aguardando oponente...</div>
+                    <div class="lobby-code-display" id="lobby-code-display">CÓDIGO DA SALA: <span id="display-room-code" class="room-code-badge">----</span></div>
+                    <div class="opponent-name-tag" id="opponent-name-tag" style="display: none;">Status: <span id="opponent-status" class="glowing-purple">Conectado</span></div>
+                </div>
+            </div>
+
+            <div class="setup-container">
+                <!-- Volume geral oculto: o ajuste fica no controle in-game -->
+                <div class="sound-controls card" style="display: none;">
+                    <div class="control-row">
+                        <label for="volume-slider" class="control-label">
+                            <span class="control-icon material-symbols-outlined" id="btn-mute-toggle" style="cursor: pointer; vertical-align: middle;">volume_up</span>
+                            Volume Geral: <span id="volume-display">80%</span>
+                        </label>
+                        <input type="range" id="volume-slider" min="0" max="100" value="80" class="slider">
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-start-game" class="btn-primary pulse-btn">
+                <span>INICIAR INVESTIGAÇÃO</span>
+            </button>
+        </section>
+
+        <!-- ==================== TELA DE JOGO ==================== -->
+        <section id="screen-game" class="screen">
+            <!-- HUD Superior -->
+            <div class="game-hud">
+                <div class="hud-item flex-col">
+                    <span class="hud-label" id="label-round-type">CENA</span>
+                    <span class="hud-value" id="hud-round">1/10</span>
+                </div>
+                
+                <div class="hud-item flex-col" id="hud-score-container">
+                    <span class="hud-label" id="hud-score-label">ACERTOS</span>
+                    <span class="hud-value glowing-purple" id="hud-score">0</span>
+                </div>
+                
+                <div class="hud-item flex-col" id="hud-sanity-container">
+                    <span class="hud-label">SANIDADE</span>
+                    <div class="sanity-hearts" id="hud-sanity-hearts">
+                        <span class="material-symbols-outlined heart active">water_drop</span>
+                        <span class="material-symbols-outlined heart active">water_drop</span>
+                        <span class="material-symbols-outlined heart active">water_drop</span>
+                    </div>
+                </div>
+
+                <div class="hud-item flex-col">
+                    <span class="hud-label">SEQUÊNCIA</span>
+                    <span class="hud-value" id="hud-streak">0x <span class="material-symbols-outlined" style="color: #ef4444; vertical-align: text-bottom; font-size: 1.15rem;">local_fire_department</span></span>
+                </div>
+            </div>
+
+            <!-- Terminal CRT do Reprodutor de Vídeo -->
+            <div class="video-panel card">
+                <div class="monitor-frame">
+                    <div class="monitor-bezel">
+                        <div class="monitor-screen-wrapper">
+                            <div class="crt-scanlines"></div>
+                            <div class="crt-glow-overlay"></div>
+                            
+                            <!-- Overlay de Sintonização (Static Noise durante o carregamento) -->
+                            <div class="video-loading-overlay" id="video-loading-screen">
+                                <div class="static-noise"></div>
+                                <div class="loading-glow"></div>
+                                <div class="loading-text-wrapper">
+                                    <span class="material-symbols-outlined loading-icon-spin" style="font-size: 2.5rem; color: var(--color-morte); animation: spin 1.5s linear infinite; margin-bottom: 0.5rem; text-shadow: 0 0 10px var(--color-morte-glow);">sync</span>
+                                    <div class="loading-main-text">SINTONIZANDO FITA...</div>
+                                </div>
+                            </div>
+
+                            <!-- IFrame visível do YouTube -->
+                            <div id="youtube-player-container">
+                                <div id="youtube-player"></div>
+                            </div>
+                            
+                            <!-- Barra de segurança mística para ocultar o título do YouTube -->
+                            <div class="video-shield-top">
+                                <span class="shield-text">🔴</span>
+                                <span class="shield-status" id="shield-countdown">10.0s</span>
+                            </div>
+                            
+                            <!-- Tela de Sinal Cortado -->
+                            <div class="signal-lost-overlay" id="signal-lost-screen" style="display: none;">
+                                <div class="static-noise"></div>
+                                <div class="lost-glow"></div>
+                                <div class="lost-text-wrapper">
+                                    <div class="lost-icon"><span class="material-symbols-outlined" style="font-size: 2.5rem; color: #f59e0b;">warning</span></div>
+                                    <div class="lost-main-text">SINAL DE VÍDEO CORTADO</div>
+                                    <div class="lost-sub-text"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="audio-player-ui">
+                    <div class="status-msg-container">
+                        <span id="player-status" class="loading-dots">Processando momento caótico do Outro Lado</span>
+                    </div>
+                    
+                    <div class="custom-audio-controls">
+                        <button id="btn-play-pause" class="btn-audio-control material-symbols-outlined" disabled>pause</button>
+                        <button id="btn-replay" class="btn-audio-control material-symbols-outlined" disabled title="Reassistir a cena (+1 vez)">replay</button>
+                        <div class="time-progress">
+                            <span id="track-time-current">0:00</span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" id="track-progress-fill"></div>
+                            </div>
+                            <span id="track-time-total">0:10</span>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Dica (desativado - recurso em desenvolvimento) -->
+                    <div class="hint-panel">
+                        <div class="hint-btn-row">
+                            <button id="btn-hint" class="btn-hint" disabled><span class="material-symbols-outlined icon-inline" style="font-size: 1.1rem; color: #f59e0b; vertical-align: text-bottom;">lightbulb</span> Obter Dica</button>
+                            <span class="hint-info-icon material-symbols-outlined" id="hint-info-icon" tabindex="0">help</span>
+                            <div class="hint-tooltip" id="hint-tooltip">---</div>
+                        </div>
+                    </div>
+
+                    <!-- Controlador de Volume In-Game -->
+                    <div class="gameplay-volume-container">
+                        <span class="vol-icon material-symbols-outlined" id="game-mute-toggle" style="cursor: pointer; vertical-align: middle;">volume_up</span>
+                        <input type="range" id="game-volume-slider" min="0" max="100" value="80" class="slider volume-small">
+                        <span id="game-volume-display" class="vol-display">80%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Temporizador (Modos Clássico / Sobrevivência) -->
+            <div class="timer-container" id="timer-box">
+                <div class="timer-bar" id="timer-bar"></div>
+            </div>
+
+            <!-- Grid de Adivinhação de Episódios -->
+            <div class="options-quiz-wrapper">
+                <div class="quiz-instruction">Identifique o Episódio correspondente:</div>
+                <div class="options-grid" id="options-grid">
+                    <!-- Gerado dinamicamente em index.js -->
+                </div>
+            </div>
+
+            <div class="game-footer">
+                <button id="btn-quit-game" class="btn-text">Abandonar Investigação</button>
+            </div>
+        </section>
+
+        <!-- ==================== TELA DE REVELAÇÃO (RESULTADO) ==================== -->
+        <section id="screen-reveal" class="screen">
+            <div class="reveal-result-banner" id="reveal-banner">
+                <span class="reveal-icon" id="reveal-banner-icon">✓</span>
+                <h2 class="reveal-title" id="reveal-banner-title">SANIDADE PRESERVADA</h2>
+                <div class="reveal-subtitle" id="reveal-banner-subtitle">Streak 1x</div>
+            </div>
+
+            <div class="reveal-details card">
+                <div class="element-icon-background material-symbols-outlined" id="reveal-element-bg">skull</div>
+
+                <h3 class="section-title">Detalhes</h3>
+
+                <!-- Contexto da Cena: escrito pelos admins no /admin, só aparece quando existe -->
+                <div class="reveal-context" id="reveal-context" style="display: none;">
+                    <div class="reveal-context-label">Contexto da Cena</div>
+                    <p class="reveal-context-text" id="reveal-context-text"></p>
+                </div>
+
+                <a href="#" target="_blank" id="btn-youtube-link" class="btn-link">
+                    <span>Assistir este Episódio completo no YouTube</span> ↗
+                </a>
+            </div>
+
+            <button id="btn-next-round" class="btn-primary">
+                <span>AVANÇAR NA INVESTIGAÇÃO</span>
+            </button>
+        </section>
+
+        <!-- ==================== TELA DE FIM DE JOGO ==================== -->
+        <section id="screen-gameover" class="screen">
+            <div class="gameover-header">
+                <div class="skull-glowing">
+                    <img src="assets/img/medo.png" alt="Símbolo do Medo" class="medo-symbol-img">
+                </div>
+                <h2 class="gameover-title" id="gameover-title-text">RELATÓRIO DE INVESTIGAÇÃO</h2>
+                <p class="gameover-subtitle" id="gameover-cause">A investigação foi concluída! Relatório arquivado pela Ordo Realitas.</p>
+            </div>
+
+            <div class="stats-summary card">
+                <h3 class="section-title">DADOS COLETADOS</h3>
+                
+                <div class="stats-grid">
+                    <div class="stat-box stat-box-featured">
+                        <span class="stat-val" id="stat-accuracy">8/10</span>
+                        <span class="stat-lbl">Acertos</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-val" id="stat-max-streak">5x <span class="material-symbols-outlined" style="color: #ef4444; vertical-align: text-bottom; font-size: 1.15rem;">local_fire_department</span></span>
+                        <span class="stat-lbl">Maior Sequência</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-val" id="stat-avg-time">12.4s</span>
+                        <span class="stat-lbl">Tempo Médio</span>
+                    </div>
+                </div>
+
+                <div class="rank-container">
+                    <span class="rank-label">Rank Paranormal Obtido:</span>
+                    <div class="rank-badge" id="stat-rank">Operador</div>
+                    <p class="rank-desc" id="stat-rank-desc">A patente mais comum da Ordem; possui experiência prática e alguns casos resolvidos.</p>
+                </div>
+            </div>
+
+            <div class="gameover-actions">
+                <button id="btn-retry" class="btn-primary">
+                    <span>NOVA INVESTIGAÇÃO</span>
+                </button>
+                <button id="btn-home" class="btn-secondary">
+                    <span>MENU INICIAL</span>
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal de Resultados do Dia -->
+    <div id="daily-result-modal" class="modal-wrapper" style="display: none;">
+        <div class="modal-content card">
+            <span class="modal-close-btn" id="modal-close-btn">&times;</span>
+            <h3 class="modal-title">Relatório de Hoje</h3>
+            <div class="modal-divider"></div>
+            <div class="modal-body" id="modal-body-content">
+                <!-- Conteúdo de resultados gerado dinamicamente -->
+            </div>
+        </div>
+    </div>
+    <!-- Modal do Calendário Diário -->
+    <div id="calendar-modal" class="modal-wrapper" style="display: none;">
+        <div class="modal-content card calendar-modal-content">
+            <span class="modal-close-btn" id="calendar-modal-close-btn">&times;</span>
+            <h3 class="modal-title">Histórico de Casos Paranormais</h3>
+            <div class="modal-divider"></div>
+            
+            <div class="calendar-header">
+                <button id="btn-calendar-prev" class="calendar-nav-btn">&larr;</button>
+                <span id="calendar-month-year" class="calendar-month-year">Janeiro 2026</span>
+                <button id="btn-calendar-next" class="calendar-nav-btn">&rarr;</button>
+            </div>
+            
+            <div class="calendar-weekdays">
+                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+            </div>
+            
+            <div class="calendar-days-grid" id="calendar-days-grid">
+                <!-- Gerado dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Scripts -->
+    <!-- IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="config.js"></script>
+    <script src="episodes.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>

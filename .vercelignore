@@ -1,0 +1,9 @@
+# Não enviar para a Vercel (a pasta publicada é só public/, gerada no build)
+.env
+.env.*
+testes/
+supabase/
+ordem-paranormal-textos.json
+extract_all.js
+node_modules/
+public/

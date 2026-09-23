@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Painel Admin - Fragmentos da Membrana</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+    <!-- ==================== LOGIN ==================== -->
+    <main id="login-screen" class="login-screen">
+        <form id="login-form" class="card login-card">
+            <h1>Painel Admin</h1>
+            <p class="muted">Fragmentos da Membrana</p>
+            <label for="login-password">Senha</label>
+            <input type="password" id="login-password" autocomplete="current-password" required autofocus>
+            <button type="submit" class="btn btn-primary">Entrar</button>
+            <p class="form-error" id="login-error"></p>
+        </form>
+    </main>
+
+    <!-- ==================== PAINEL ==================== -->
+    <main id="panel" class="panel" hidden>
+        <header class="panel-header">
+            <div>
+                <h1>Cenas do Modo Diário</h1>
+                <p class="muted">Revise as cenas de cada dia, marque as que caíram em abertura, intervalo ou encerramento e escreva o contexto.</p>
+            </div>
+            <button type="button" id="btn-logout" class="btn btn-ghost">Sair</button>
+        </header>
+
+        <section class="card start-date-card">
+            <div>
+                <h2>Data inicial do Modo Diário</h2>
+                <p class="muted" id="start-date-status">Carregando…</p>
+            </div>
+            <div class="start-date-controls">
+                <input type="date" id="start-date-input">
+                <button type="button" id="btn-save-start-date" class="btn btn-primary">Salvar</button>
+                <button type="button" id="btn-clear-start-date" class="btn btn-ghost">Remover trava</button>
+            </div>
+        </section>
+
+        <nav class="day-nav" aria-label="Escolher dia">
+            <button type="button" id="btn-prev-day" class="btn btn-ghost" aria-label="Dia anterior">←</button>
+            <input type="date" id="day-input">
+            <button type="button" id="btn-next-day" class="btn btn-ghost" aria-label="Próximo dia">→</button>
+            <button type="button" id="btn-today" class="btn btn-ghost">Hoje</button>
+            <span class="day-tag" id="day-tag"></span>
+        </nav>
+
+        <p class="form-error" id="panel-error"></p>
+
+        <section class="scenes-grid" id="scenes-grid"></section>
+    </main>
+
+    <template id="scene-card-template">
+        <article class="card scene-card">
+            <header class="scene-head">
+                <span class="scene-number"></span>
+                <h3 class="scene-season"></h3>
+                <span class="scene-badge"></span>
+            </header>
+            <p class="scene-episode"></p>
+            <p class="scene-time muted"></p>
+
+            <div class="scene-video">
+                <button type="button" class="btn btn-ghost btn-load-video">▶ Carregar cena</button>
+            </div>
+            <a class="scene-yt-link" target="_blank" rel="noopener">Abrir no YouTube neste momento ↗</a>
+
+            <div class="scene-issue">
+                <span class="field-label">A cena caiu em:</span>
+                <div class="issue-buttons">
+                    <button type="button" class="btn btn-issue" data-motivo="abertura">Abertura</button>
+                    <button type="button" class="btn btn-issue" data-motivo="intervalo">Intervalo</button>
+                    <button type="button" class="btn btn-issue" data-motivo="encerramento">Encerramento</button>
+                </div>
+                <button type="button" class="btn btn-link btn-undo" hidden>Desfazer última marcação</button>
+            </div>
+
+            <div class="scene-context">
+                <label class="field-label">Contexto da Cena <span class="muted">(opcional)</span></label>
+                <textarea class="context-input" maxlength="1000" rows="4" placeholder="Ex.: momento em que o grupo encontra o símbolo na parede da igreja."></textarea>
+                <div class="context-footer">
+                    <span class="context-count muted">0/1000</span>
+                    <span class="context-status"></span>
+                    <button type="button" class="btn btn-primary btn-save-context">Salvar contexto</button>
+                </div>
+            </div>
+        </article>
+    </template>
+
+    <script src="/episodes.js"></script>
+    <script src="/admin/admin.js"></script>
+</body>
+</html>
