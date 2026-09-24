@@ -362,6 +362,7 @@ class OrdemSceneQuiz {
             retry: document.getElementById('btn-retry'),
             home: document.getElementById('btn-home'),
             quit: document.getElementById('btn-quit-game'),
+            quitReveal: document.getElementById('btn-quit-reveal'),
             hint: document.getElementById('btn-hint'),
             createLobby: document.getElementById('btn-create-lobby'),
             joinLobby: document.getElementById('btn-join-lobby')
@@ -854,23 +855,30 @@ class OrdemSceneQuiz {
             }
         });
 
-        this.buttons.quit.addEventListener('click', () => {
-            sfx.playClick();
-            const msg = this.gameMode === 'infinite'
-                ? "Encerrar a investigação infinita e ver o seu relatório?"
-                : "Deseja mesmo abandonar a investigação?";
-
-            if (confirm(msg)) {
-                if (this.socket) {
-                    this.socket.send(JSON.stringify({ type: 'QUIT_GAME' }));
-                    this.socket.close();
-                }
-                // No modo infinito não existe fim natural: encerrar mostra o relatório
-                this.endGame(this.gameMode !== 'infinite');
-            }
-        });
+        this.buttons.quit.addEventListener('click', () => this.confirmQuit());
+        // Mesma ação, disponível também na tela de revelação (só aparece no Modo Infinito)
+        this.buttons.quitReveal.addEventListener('click', () => this.confirmQuit());
 
         // Botão de Dica: permanece desativado (recurso em desenvolvimento, ver tooltip do ícone "?")
+    }
+
+    // Abandonar Investigação, chamado tanto pelo botão da tela de jogo quanto pelo da revelação
+    // (Modo Infinito). No Infinito, a cena em andamento (ainda não respondida) não entra no
+    // relatório — a que acabou de ser respondida, sim, porque já está em this.roundLog.
+    confirmQuit() {
+        sfx.playClick();
+        const msg = this.gameMode === 'infinite'
+            ? "Encerrar a investigação infinita e ver o seu relatório?"
+            : "Deseja mesmo abandonar a investigação?";
+
+        if (confirm(msg)) {
+            if (this.socket) {
+                this.socket.send(JSON.stringify({ type: 'QUIT_GAME' }));
+                this.socket.close();
+            }
+            // No modo infinito não existe fim natural: encerrar mostra o relatório
+            this.endGame(this.gameMode !== 'infinite');
+        }
     }
 
     showScreen(screenName) {
@@ -1475,7 +1483,7 @@ class OrdemSceneQuiz {
                 </div>
             `;
             modal.style.display = 'flex';
-            this.renderGlobalStatsCaption('daily', dateStr, 'modal-global-stats-text');
+            this.renderGlobalStatsCaption(dateStr, 'modal-global-stats-text');
         }
     }
 
@@ -1798,6 +1806,8 @@ class OrdemSceneQuiz {
         } else {
             this.buttons.hint.style.display = 'block';
         }
+        // Botão de abandonar na tela de revelação: só no Modo Infinito
+        this.buttons.quitReveal.style.display = this.gameMode === 'infinite' ? 'block' : 'none';
         document.getElementById('signal-lost-screen').style.display = 'none';
 
         // Configurar e tocar a cena
@@ -2166,12 +2176,17 @@ class OrdemSceneQuiz {
             return;
         }
 
-        // Estatísticas finais
-        const totalRespondidas = this.gameMode === 'classic' ? this.totalRounds : this.currentRound;
+        // Estatísticas finais. No Infinito, usa this.roundLog.length (não this.currentRound):
+        // se o jogador abandona no meio de uma cena ainda não respondida, ela não deve contar
+        // como jogada — só entra no relatório a cena que ele já respondeu antes de sair.
+        const totalRespondidas = this.gameMode === 'classic' ? this.totalRounds
+            : this.gameMode === 'infinite' ? this.roundLog.length
+            : this.currentRound;
         this.gameover.accuracy.innerText = `${this.totalAcertos}/${totalRespondidas}`;
         this.gameover.streak.innerHTML = `${this.maxStreak}x <span class="material-symbols-outlined" style="color: #ef4444; vertical-align: text-bottom; font-size: 1.15rem;">local_fire_department</span>`;
 
-        const avgTime = this.totalTempoResposta / totalRespondidas;
+        // >0 guard: no Infinito, abandonar antes de responder a primeira cena zera totalRespondidas
+        const avgTime = totalRespondidas > 0 ? this.totalTempoResposta / totalRespondidas : 0;
         this.gameover.avgTime.innerText = `${avgTime.toFixed(1)}s`;
 
         // Rank: proporcional aos acertos (mesma escala do Modo Diário) para Diário, Clássico e Infinito.
@@ -2202,11 +2217,17 @@ class OrdemSceneQuiz {
         this.gameover.rank.innerText = rank;
         this.gameover.rankDesc.innerText = desc;
 
-        // Só busca a média geral depois que o próprio envio termina, para ela já entrar na conta
-        const dailyDateForStats = this.gameMode === 'daily' ? this.selectedDailyDate : null;
-        this.submitGlobalStats().finally(() => {
-            this.renderGlobalStatsCaption(this.gameMode, dailyDateForStats, 'global-stats-text');
-        });
+        // Média geral só no Diário: é o único modo em que todos jogam as mesmas cenas, então a
+        // comparação é justa. Busca depois que o próprio envio termina, para ele já entrar na conta.
+        const globalStatsEl = document.getElementById('global-stats-text');
+        if (globalStatsEl) globalStatsEl.style.display = 'none';
+        const submitted = this.submitGlobalStats();
+        if (this.gameMode === 'daily') {
+            const dailyDateForStats = this.selectedDailyDate;
+            submitted.finally(() => {
+                this.renderGlobalStatsCaption(dailyDateForStats, 'global-stats-text');
+            });
+        }
 
         if (this.gameMode === 'infinite') {
             this.gameover.cause.innerText = "Investigação infinita interrompida. Relatório do medo arquivado pela Ordo Realitas.";
@@ -2266,12 +2287,11 @@ class OrdemSceneQuiz {
         }).catch(() => {});
     }
 
-    // Busca as estatísticas gerais (agregadas, sem dado de nenhum jogador) para comparar com o
-    // resultado do próprio jogador. Retorna null em qualquer falha (sem Supabase, sem rede, etc.).
-    async fetchGlobalStats(mode, dateStr) {
+    // Busca a média geral de um dia do Diário (agregada, sem dado de nenhum jogador) para comparar
+    // com o resultado do próprio jogador. Retorna null em qualquer falha (sem Supabase, sem rede, etc.).
+    async fetchGlobalStats(dateStr) {
         try {
-            const qs = mode === 'daily' ? `mode=daily&day=${dateStr}` : `mode=${mode}`;
-            const response = await fetch(`/api/global-stats?${qs}`, { cache: 'no-store' });
+            const response = await fetch(`/api/global-stats?day=${dateStr}`, { cache: 'no-store' });
             if (!response.ok) return null;
             return await response.json();
         } catch (e) {
@@ -2285,27 +2305,21 @@ class OrdemSceneQuiz {
         return Number.isFinite(n) ? n.toFixed(digits).replace('.', ',') : '—';
     }
 
-    // Texto compacto da média geral: "Média geral: 3,4/6 · 128 agentes hoje" (Diário)
-    // ou "Média geral: 61% de acerto · 342 partidas" (Clássico/Infinito). null se não há dado ainda.
-    formatGlobalStatsText(mode, data) {
-        if (mode === 'daily') {
-            if (!data || !data.jogadores) return null;
-            const quem = data.jogadores === 1 ? '1 agente' : `${data.jogadores} agentes`;
-            return `Média geral: ${this.formatDecimalBR(data.mediaAcertos)}/6 · ${quem} hoje`;
-        }
-        if (!data || !data.partidas) return null;
-        const quantas = data.partidas === 1 ? '1 partida' : `${data.partidas} partidas`;
-        return `Média geral: ${this.formatDecimalBR(data.taxaAcertoPct, 0)}% de acerto · ${quantas}`;
+    // Texto compacto da média geral do dia: "Média geral: 3,4/6 · 128 agentes hoje". null se não há dado ainda.
+    formatGlobalStatsText(data) {
+        if (!data || !data.jogadores) return null;
+        const quem = data.jogadores === 1 ? '1 agente' : `${data.jogadores} agentes`;
+        return `Média geral: ${this.formatDecimalBR(data.mediaAcertos)}/6 · ${quem} hoje`;
     }
 
     // Preenche a legenda de média geral ao lado do resultado do jogador. Fica oculta até chegar
     // (ou permanece oculta, sem Supabase configurado): é um complemento, nunca bloqueia a tela.
-    async renderGlobalStatsCaption(mode, dateStr, elementId) {
+    async renderGlobalStatsCaption(dateStr, elementId) {
         const el = document.getElementById(elementId);
         if (!el) return;
         el.style.display = 'none';
-        const data = await this.fetchGlobalStats(mode, dateStr);
-        const text = this.formatGlobalStatsText(mode, data);
+        const data = await this.fetchGlobalStats(dateStr);
+        const text = this.formatGlobalStatsText(data);
         if (text) {
             el.textContent = text;
             el.style.display = 'block';

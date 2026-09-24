@@ -369,35 +369,20 @@ async function handleDaily(req, res, dateStr) {
     sendJson(res, 200, ajustes);
 }
 
-// Estatísticas GLOBAIS agregadas (nenhum dado de jogador), para o jogo mostrar ao lado do resultado
-// do próprio jogador. GET /api/global-stats?mode=daily&day=AAAA-MM-DD ou ?mode=classic|infinite
+// Média geral de um dia do Diário (agregada, nenhum dado de jogador), para o jogo mostrar ao lado
+// do resultado do próprio jogador. GET /api/global-stats?day=AAAA-MM-DD
+// Só o Diário: é o único modo em que todos jogam as mesmas cenas, então a comparação é justa.
 // Lê a query direto de req.url (em vez de req.query) para funcionar igual no server.js local e na Vercel.
 async function handleGlobalStats(req, res) {
     if (!requireMethod(req, res, 'GET')) return;
-    const params = new URL(req.url, 'http://x').searchParams;
-    const mode = params.get('mode');
-    if (!['daily', 'classic', 'infinite'].includes(mode)) {
-        return sendJson(res, 400, { erro: 'Parâmetro "mode" inválido.' });
-    }
-
-    if (mode === 'daily') {
-        const dia = params.get('day') || '';
-        if (!(await isDailyDateAllowed(dia))) return sendJson(res, 403, { erro: 'Dia indisponível.' });
-        const r = await supabaseRequest(`stats_diario?dia=eq.${dia}&select=jogadores,media_acertos`);
-        if (!r.ok) return supabaseError(res, r);
-        const row = Array.isArray(r.data) ? r.data[0] : null;
-        return sendJson(res, 200, {
-            jogadores: row ? Number(row.jogadores) : 0,
-            mediaAcertos: row ? Number(row.media_acertos) : 0
-        });
-    }
-
-    const r = await supabaseRequest(`stats_modos?modo=eq.${mode}&select=partidas,taxa_acerto_pct`);
+    const dia = new URL(req.url, 'http://x').searchParams.get('day') || '';
+    if (!(await isDailyDateAllowed(dia))) return sendJson(res, 403, { erro: 'Dia indisponível.' });
+    const r = await supabaseRequest(`stats_diario?dia=eq.${dia}&select=jogadores,media_acertos`);
     if (!r.ok) return supabaseError(res, r);
     const row = Array.isArray(r.data) ? r.data[0] : null;
     sendJson(res, 200, {
-        partidas: row ? Number(row.partidas) : 0,
-        taxaAcertoPct: row ? Number(row.taxa_acerto_pct) : 0
+        jogadores: row ? Number(row.jogadores) : 0,
+        mediaAcertos: row ? Number(row.media_acertos) : 0
     });
 }
 

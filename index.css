@@ -317,7 +317,9 @@ body::before {
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.6rem 1rem;
     cursor: pointer;
     text-decoration: underline;
     transition: var(--transition-fast);
@@ -325,6 +327,12 @@ body::before {
 
 .btn-text:hover {
     color: var(--color-theme-alt);
+}
+
+/* Botão de texto solto direto numa tela (sem um wrapper .game-footer para centralizar) */
+#btn-quit-reveal {
+    display: block;
+    margin: 0.75rem auto 0;
 }
 
 /* ==============================================
