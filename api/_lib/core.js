@@ -338,6 +338,18 @@ async function handleStats(req, res) {
     sendEmpty(res, r.ok ? 204 : (r.status === 503 ? 503 : 502));
 }
 
+// Conta um clique em "Iniciar Investigação" que passou nas checagens do jogo (independe de a
+// partida ser concluída ou abandonada). Usado só pelo botão "Estatísticas" do /admin.
+const SOLO_MODES = ['daily', 'classic', 'infinite'];
+async function handleGameStart(req, res) {
+    if (!requireMethod(req, res, 'POST')) return;
+    const body = await readJsonBody(req);
+    const mode = body && body.mode;
+    if (!SOLO_MODES.includes(mode)) return sendEmpty(res, 400);
+    const r = await supabaseRequest('rpc/registrar_inicio', { method: 'POST', body: { p_modo: mode } });
+    sendEmpty(res, r.ok ? 204 : (r.status === 503 ? 503 : 502));
+}
+
 // Ajustes públicos de um dia do Diário (usados pelo jogo): { temporada: { tentativa, contexto } }
 async function handleDaily(req, res, dateStr) {
     if (!requireMethod(req, res, 'GET')) return;
@@ -355,6 +367,38 @@ async function handleDaily(req, res, dateStr) {
     }
     // Sem banco, o jogo segue com o sorteio normal
     sendJson(res, 200, ajustes);
+}
+
+// Estatísticas GLOBAIS agregadas (nenhum dado de jogador), para o jogo mostrar ao lado do resultado
+// do próprio jogador. GET /api/global-stats?mode=daily&day=AAAA-MM-DD ou ?mode=classic|infinite
+// Lê a query direto de req.url (em vez de req.query) para funcionar igual no server.js local e na Vercel.
+async function handleGlobalStats(req, res) {
+    if (!requireMethod(req, res, 'GET')) return;
+    const params = new URL(req.url, 'http://x').searchParams;
+    const mode = params.get('mode');
+    if (!['daily', 'classic', 'infinite'].includes(mode)) {
+        return sendJson(res, 400, { erro: 'Parâmetro "mode" inválido.' });
+    }
+
+    if (mode === 'daily') {
+        const dia = params.get('day') || '';
+        if (!(await isDailyDateAllowed(dia))) return sendJson(res, 403, { erro: 'Dia indisponível.' });
+        const r = await supabaseRequest(`stats_diario?dia=eq.${dia}&select=jogadores,media_acertos`);
+        if (!r.ok) return supabaseError(res, r);
+        const row = Array.isArray(r.data) ? r.data[0] : null;
+        return sendJson(res, 200, {
+            jogadores: row ? Number(row.jogadores) : 0,
+            mediaAcertos: row ? Number(row.media_acertos) : 0
+        });
+    }
+
+    const r = await supabaseRequest(`stats_modos?modo=eq.${mode}&select=partidas,taxa_acerto_pct`);
+    if (!r.ok) return supabaseError(res, r);
+    const row = Array.isArray(r.data) ? r.data[0] : null;
+    sendJson(res, 200, {
+        partidas: row ? Number(row.partidas) : 0,
+        taxaAcertoPct: row ? Number(row.taxa_acerto_pct) : 0
+    });
 }
 
 // ==========================================
@@ -521,6 +565,31 @@ async function handleAdminStartDate(req, res) {
     sendJson(res, 200, { dataInicio: await getDailyStartDate() });
 }
 
+// Quantas vezes cada modo foi iniciado por dia, num intervalo (botão "Estatísticas" do /admin).
+// Limita o intervalo a 366 dias para a consulta não crescer sem limite.
+async function handleAdminStats(req, res) {
+    if (!requireMethod(req, res, 'GET') || !requireAdmin(req, res)) return;
+    const params = new URL(req.url, 'http://x').searchParams;
+    const de = params.get('de') || '';
+    const ate = params.get('ate') || '';
+    if (!isValidDateStr(de) || !isValidDateStr(ate) || de > ate || addDays(de, 366) < ate) {
+        return sendJson(res, 400, { erro: 'Intervalo de datas inválido (máximo de 366 dias).' });
+    }
+
+    const r = await supabaseRequest(`stats_inicios?dia=gte.${de}&dia=lte.${ate}&select=dia,modo,vezes&order=dia.desc`);
+    if (!r.ok) return supabaseError(res, r);
+
+    // Uma linha por dia com as três colunas (modo com 0 partidas nem aparece na tabela)
+    const porDia = new Map();
+    (r.data || []).forEach(row => {
+        const dia = String(row.dia).slice(0, 10);
+        if (!porDia.has(dia)) porDia.set(dia, { dia, daily: 0, classic: 0, infinite: 0 });
+        if (SOLO_MODES.includes(row.modo)) porDia.get(dia)[row.modo] = Number(row.vezes) || 0;
+    });
+    const dias = [...porDia.values()].sort((a, b) => b.dia.localeCompare(a.dia));
+    sendJson(res, 200, { dias });
+}
+
 // ==========================================
 // ROTEADOR (usado pelo server.js local; na Vercel cada rota é um arquivo em api/)
 // Retorna true se a requisição foi tratada.
@@ -529,11 +598,14 @@ async function handleRoutes(req, res, pathname) {
     let match;
     if (pathname === '/config.js') await handleConfig(req, res);
     else if (pathname === '/api/stats') await handleStats(req, res);
+    else if (pathname === '/api/game-start') await handleGameStart(req, res);
     else if ((match = pathname.match(/^\/api\/daily\/([^/]+)$/))) await handleDaily(req, res, match[1]);
+    else if (pathname === '/api/global-stats') await handleGlobalStats(req, res);
     else if (pathname === '/api/admin/login') await handleAdminLogin(req, res);
     else if ((match = pathname.match(/^\/api\/admin\/dia\/([^/]+)$/))) await handleAdminDay(req, res, match[1]);
     else if (pathname === '/api/admin/cena') await handleAdminScene(req, res);
     else if (pathname === '/api/admin/data-inicio') await handleAdminStartDate(req, res);
+    else if (pathname === '/api/admin/estatisticas') await handleAdminStats(req, res);
     else if (pathname.startsWith('/api/')) sendJson(res, 404, { erro: 'Rota não encontrada.' });
     else return false;
     return true;
@@ -562,9 +634,12 @@ module.exports = {
     handleRoutes,
     handleConfig,
     handleStats,
+    handleGameStart,
     handleDaily,
+    handleGlobalStats,
     handleAdminLogin,
     handleAdminDay,
     handleAdminScene,
-    handleAdminStartDate
+    handleAdminStartDate,
+    handleAdminStats
 };

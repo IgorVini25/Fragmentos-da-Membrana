@@ -30,7 +30,10 @@
                 <h1>Cenas do Modo Diário</h1>
                 <p class="muted">Revise as cenas de cada dia, marque as que caíram em abertura, intervalo ou encerramento e escreva o contexto.</p>
             </div>
-            <button type="button" id="btn-logout" class="btn btn-ghost">Sair</button>
+            <div class="header-actions">
+                <button type="button" id="btn-open-stats" class="btn btn-ghost">Estatísticas</button>
+                <button type="button" id="btn-logout" class="btn btn-ghost">Sair</button>
+            </div>
         </header>
 
         <section class="card start-date-card">
@@ -57,6 +60,33 @@
 
         <section class="scenes-grid" id="scenes-grid"></section>
     </main>
+
+    <!-- Modal de Estatísticas: quantas vezes cada modo foi iniciado por dia -->
+    <div id="stats-modal" class="modal-overlay" hidden>
+        <div class="card stats-modal-content">
+            <header class="stats-modal-header">
+                <h2>Partidas Iniciadas por Dia</h2>
+                <button type="button" id="btn-close-stats" class="btn btn-ghost" aria-label="Fechar">&times;</button>
+            </header>
+            <p class="muted">Cada clique em "Iniciar Investigação" conta aqui, mesmo que o jogador não termine a partida. O Duelo ainda não é contado (fica fora da API, roda só por WebSocket).</p>
+
+            <div class="stats-filters">
+                <label>De <input type="date" id="stats-from"></label>
+                <label>Até <input type="date" id="stats-to"></label>
+            </div>
+
+            <p class="form-error" id="stats-error"></p>
+
+            <div class="stats-table-wrap">
+                <table class="stats-table">
+                    <thead>
+                        <tr><th>Dia</th><th>Diário</th><th>Clássico</th><th>Infinito</th><th>Total</th></tr>
+                    </thead>
+                    <tbody id="stats-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <template id="scene-card-template">
         <article class="card scene-card">

@@ -87,6 +87,7 @@ textarea { width: 100%; resize: vertical; line-height: 1.45; }
 .panel { max-width: 1180px; margin: 0 auto; padding: 1.5rem 16px 3rem; display: flex; flex-direction: column; gap: 1rem; }
 .panel-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .panel-header p { margin: 0.35rem 0 0; }
+.header-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
 .start-date-card { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .start-date-card p { margin: 0.3rem 0 0; }
@@ -127,8 +128,27 @@ textarea { width: 100%; resize: vertical; line-height: 1.45; }
 .context-status.error { color: var(--danger); }
 .context-status.dirty { color: var(--warn); }
 
+/* ---------- Modal de Estatísticas ---------- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 100; }
+.stats-modal-content { width: 100%; max-width: 640px; max-height: min(80vh, 640px); display: flex; flex-direction: column; gap: 0.75rem; }
+.stats-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.stats-modal-header h2 { font-size: 1.15rem; }
+.stats-modal-header .btn { font-size: 1.1rem; line-height: 1; padding: 0.3rem 0.65rem; }
+.stats-filters { display: flex; gap: 1rem; flex-wrap: wrap; }
+.stats-filters label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--muted); }
+
+.stats-table-wrap { overflow: auto; border: 1px solid var(--card-border); border-radius: 8px; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.stats-table th, .stats-table td { padding: 0.5rem 0.75rem; text-align: right; white-space: nowrap; }
+.stats-table th:first-child, .stats-table td:first-child { text-align: left; }
+.stats-table thead th { position: sticky; top: 0; background: var(--card); border-bottom: 1px solid var(--card-border); color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.stats-table tbody tr:not(:last-child) td { border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+.stats-table tbody td.muted { text-align: center; }
+
 @media (max-width: 480px) {
     .scenes-grid { grid-template-columns: 1fr; }
     .panel-header { flex-direction: column; }
     .start-date-controls, .start-date-controls input { width: 100%; }
+    .header-actions { width: 100%; }
+    .header-actions .btn { flex: 1; }
 }

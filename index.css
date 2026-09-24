@@ -1952,6 +1952,17 @@ body::before {
     text-transform: uppercase;
 }
 
+/* Média geral (agregada, sem dado de jogador nenhum), legenda compacta abaixo do resultado do jogador */
+.stat-global {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--text-muted);
+}
+
 .rank-container {
     background: rgba(139, 92, 246, 0.02);
     border: 1px dashed var(--color-morte-glow);

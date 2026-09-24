@@ -32,7 +32,14 @@ const el = {
     today: document.getElementById('btn-today'),
     dayTag: document.getElementById('day-tag'),
     grid: document.getElementById('scenes-grid'),
-    template: document.getElementById('scene-card-template')
+    template: document.getElementById('scene-card-template'),
+    openStats: document.getElementById('btn-open-stats'),
+    statsModal: document.getElementById('stats-modal'),
+    closeStats: document.getElementById('btn-close-stats'),
+    statsFrom: document.getElementById('stats-from'),
+    statsTo: document.getElementById('stats-to'),
+    statsError: document.getElementById('stats-error'),
+    statsBody: document.getElementById('stats-table-body')
 };
 
 // ==========================================
@@ -478,6 +485,62 @@ async function saveContext(card, scene) {
         saveBtn.disabled = false;
     }
 }
+
+// ==========================================
+// Modal de Estatísticas: partidas iniciadas por dia
+// ==========================================
+function openStatsModal() {
+    const ate = todayStr();
+    const de = addDays(ate, -29); // últimos 30 dias
+    el.statsFrom.value = de;
+    el.statsTo.value = ate;
+    el.statsError.textContent = '';
+    el.statsModal.hidden = false;
+    loadStats();
+}
+
+function closeStatsModal() {
+    el.statsModal.hidden = true;
+}
+
+async function loadStats() {
+    const de = el.statsFrom.value;
+    const ate = el.statsTo.value;
+    el.statsError.textContent = '';
+
+    if (!de || !ate || de > ate) {
+        el.statsError.textContent = 'Intervalo de datas inválido.';
+        el.statsBody.innerHTML = '';
+        return;
+    }
+
+    el.statsBody.innerHTML = '<tr><td colspan="5" class="muted">Carregando…</td></tr>';
+    try {
+        const result = await api(`/api/admin/estatisticas?de=${de}&ate=${ate}`);
+        renderStatsTable(result.dias || []);
+    } catch (err) {
+        el.statsError.textContent = err.message;
+        el.statsBody.innerHTML = '';
+    }
+}
+
+function renderStatsTable(dias) {
+    if (dias.length === 0) {
+        el.statsBody.innerHTML = '<tr><td colspan="5" class="muted">Nenhuma partida iniciada neste período.</td></tr>';
+        return;
+    }
+    el.statsBody.innerHTML = dias.map(d => {
+        const total = d.daily + d.classic + d.infinite;
+        return `<tr><td>${formatDate(d.dia)}</td><td>${d.daily}</td><td>${d.classic}</td><td>${d.infinite}</td><td><strong>${total}</strong></td></tr>`;
+    }).join('');
+}
+
+el.openStats.addEventListener('click', openStatsModal);
+el.closeStats.addEventListener('click', closeStatsModal);
+el.statsModal.addEventListener('click', (e) => { if (e.target === el.statsModal) closeStatsModal(); });
+el.statsFrom.addEventListener('change', loadStats);
+el.statsTo.addEventListener('change', loadStats);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.statsModal.hidden) closeStatsModal(); });
 
 // ==========================================
 // Início

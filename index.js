@@ -1457,6 +1457,7 @@ class OrdemSceneQuiz {
                 <div style="background: rgba(139,92,246,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 1rem; text-align: center; margin-bottom: 0.75rem;">
                     <div style="font-size: 1.75rem; font-weight: 800; color: #fff;">${esc(result.accuracy)}</div>
                     <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; margin-top: 2px;">Acertos</div>
+                    <div id="modal-global-stats-text" style="display: none; font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;"></div>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
                     <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 0.75rem; text-align: center;">
@@ -1474,6 +1475,7 @@ class OrdemSceneQuiz {
                 </div>
             `;
             modal.style.display = 'flex';
+            this.renderGlobalStatsCaption('daily', dateStr, 'modal-global-stats-text');
         }
     }
 
@@ -1678,6 +1680,10 @@ class OrdemSceneQuiz {
             alert("Por favor, escolha ao menos uma temporada antes de iniciar a investigação.");
             return;
         }
+
+        // Conta o início para o painel /admin, já aqui — independe de o jogador terminar ou não
+        this.recordGameStart(this.gameMode);
+
         if (this.gameMode === 'daily') {
             this.isStartingGame = true;
             await this.loadDailyAdjustments(this.selectedDailyDate);
@@ -2196,7 +2202,11 @@ class OrdemSceneQuiz {
         this.gameover.rank.innerText = rank;
         this.gameover.rankDesc.innerText = desc;
 
-        this.submitGlobalStats();
+        // Só busca a média geral depois que o próprio envio termina, para ela já entrar na conta
+        const dailyDateForStats = this.gameMode === 'daily' ? this.selectedDailyDate : null;
+        this.submitGlobalStats().finally(() => {
+            this.renderGlobalStatsCaption(this.gameMode, dailyDateForStats, 'global-stats-text');
+        });
 
         if (this.gameMode === 'infinite') {
             this.gameover.cause.innerText = "Investigação infinita interrompida. Relatório do medo arquivado pela Ordo Realitas.";
@@ -2226,22 +2236,80 @@ class OrdemSceneQuiz {
         this.showScreen('gameover');
     }
 
+    // Conta um início de partida para o botão "Estatísticas" do /admin (dispara e esquece:
+    // não bloqueia o início do jogo nem se importa se o jogador termina ou abandona depois).
+    recordGameStart(mode) {
+        fetch('/api/game-start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode }),
+            keepalive: true
+        }).catch(() => {});
+    }
+
     // Envia o resultado da partida para o servidor, que soma nas estatísticas acumuladas do Supabase
     // (ver supabase/schema.sql). Nada identifica o jogador. Falhas são ignoradas: o jogo funciona sem o banco.
+    // Devolve a Promise do envio, para quem quiser esperar terminar (ex.: antes de buscar a média geral).
     submitGlobalStats() {
-        if (this.roundLog.length === 0) return;
+        if (this.roundLog.length === 0) return Promise.resolve();
         const payload = {
             mode: this.gameMode,
             dailyDate: this.gameMode === 'daily' ? this.selectedDailyDate : null,
             rounds: this.roundLog,
             maxStreak: this.maxStreak
         };
-        fetch('/api/stats', {
+        return fetch('/api/stats', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
             keepalive: true
         }).catch(() => {});
+    }
+
+    // Busca as estatísticas gerais (agregadas, sem dado de nenhum jogador) para comparar com o
+    // resultado do próprio jogador. Retorna null em qualquer falha (sem Supabase, sem rede, etc.).
+    async fetchGlobalStats(mode, dateStr) {
+        try {
+            const qs = mode === 'daily' ? `mode=daily&day=${dateStr}` : `mode=${mode}`;
+            const response = await fetch(`/api/global-stats?${qs}`, { cache: 'no-store' });
+            if (!response.ok) return null;
+            return await response.json();
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Número no padrão brasileiro (vírgula decimal), ex.: 3.4 -> "3,4"
+    formatDecimalBR(value, digits = 1) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n.toFixed(digits).replace('.', ',') : '—';
+    }
+
+    // Texto compacto da média geral: "Média geral: 3,4/6 · 128 agentes hoje" (Diário)
+    // ou "Média geral: 61% de acerto · 342 partidas" (Clássico/Infinito). null se não há dado ainda.
+    formatGlobalStatsText(mode, data) {
+        if (mode === 'daily') {
+            if (!data || !data.jogadores) return null;
+            const quem = data.jogadores === 1 ? '1 agente' : `${data.jogadores} agentes`;
+            return `Média geral: ${this.formatDecimalBR(data.mediaAcertos)}/6 · ${quem} hoje`;
+        }
+        if (!data || !data.partidas) return null;
+        const quantas = data.partidas === 1 ? '1 partida' : `${data.partidas} partidas`;
+        return `Média geral: ${this.formatDecimalBR(data.taxaAcertoPct, 0)}% de acerto · ${quantas}`;
+    }
+
+    // Preenche a legenda de média geral ao lado do resultado do jogador. Fica oculta até chegar
+    // (ou permanece oculta, sem Supabase configurado): é um complemento, nunca bloqueia a tela.
+    async renderGlobalStatsCaption(mode, dateStr, elementId) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.style.display = 'none';
+        const data = await this.fetchGlobalStats(mode, dateStr);
+        const text = this.formatGlobalStatsText(mode, data);
+        if (text) {
+            el.textContent = text;
+            el.style.display = 'block';
+        }
     }
 
     // ==========================================

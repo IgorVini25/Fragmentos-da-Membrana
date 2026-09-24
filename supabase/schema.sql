@@ -326,6 +326,33 @@ revoke execute on function public.limpar_falhas_login(text)   from public;
 
 
 -- ==========================================================================
+-- PARTIDAS INICIADAS (painel /admin > botão "Estatísticas")
+-- Conta cada clique em "Iniciar Investigação" que passou nas checagens (independe de terminar
+-- a partida ou não) — diferente de stats_diario/stats_modos, que só somam partidas concluídas.
+-- ==========================================================================
+create table if not exists public.stats_inicios (
+    dia   date not null,
+    modo  text not null check (modo in ('daily', 'classic', 'infinite')),
+    vezes int  not null default 0,
+    primary key (dia, modo)
+);
+alter table public.stats_inicios enable row level security;
+
+-- "Hoje" calculado no próprio banco (fuso de Brasília), para não depender do relógio do servidor
+create or replace function public.registrar_inicio(p_modo text)
+returns void
+language sql
+set search_path = public
+as $$
+    insert into stats_inicios (dia, modo, vezes)
+    values ((now() at time zone 'America/Sao_Paulo')::date, p_modo, 1)
+    on conflict (dia, modo) do update set vezes = stats_inicios.vezes + 1;
+$$;
+
+revoke execute on function public.registrar_inicio(text) from public;
+
+
+-- ==========================================================================
 -- PERMISSÕES
 -- O Supabase dá acesso às tabelas e funções novas para as chaves públicas (anon/authenticated).
 -- O RLS sem policies já bloqueia os dados, mas aqui tiramos também as permissões:
@@ -336,12 +363,13 @@ begin
     if exists (select 1 from pg_roles where rolname = 'anon') then
         revoke all on table
             public.stats_diario, public.stats_diario_cenas, public.stats_episodios, public.stats_modos,
-            public.config, public.cenas_diario_ajustes, public.admin_login_falhas
+            public.config, public.cenas_diario_ajustes, public.admin_login_falhas, public.stats_inicios
         from anon, authenticated;
 
         revoke execute on function public.registrar_partida(jsonb)               from anon, authenticated;
         revoke execute on function public.falhas_login(text)                     from anon, authenticated;
         revoke execute on function public.registrar_falha_login(text)            from anon, authenticated;
         revoke execute on function public.limpar_falhas_login(text)              from anon, authenticated;
+        revoke execute on function public.registrar_inicio(text)                 from anon, authenticated;
     end if;
 end $$;
