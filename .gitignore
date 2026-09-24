@@ -7,3 +7,8 @@ public/
 
 node_modules/
 .vercel/
+
+# Ferramentas/arquivos locais (não versionar)
+extract_all.js
+ordem-paranormal-textos.json
+testes/
