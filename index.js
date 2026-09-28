@@ -756,6 +756,10 @@ class OrdemSceneQuiz {
             });
         }
 
+        this.bindFeedbackModal();
+        this.bindPerformanceTip();
+        this.bindModalScrollLock();
+
         // Controles do Calendário Diário
         const btnOpenCalendar = document.getElementById('btn-open-calendar');
         const calendarModal = document.getElementById('calendar-modal');
@@ -865,6 +869,98 @@ class OrdemSceneQuiz {
     // Abandonar Investigação, chamado tanto pelo botão da tela de jogo quanto pelo da revelação
     // (Modo Infinito). No Infinito, a cena em andamento (ainda não respondida) não entra no
     // relatório — a que acabou de ser respondida, sim, porque já está em this.roundLog.
+    // Trava o scroll da página enquanto qualquer modal estiver aberta (as modais abrem/fecham via style.display)
+    bindModalScrollLock() {
+        const modals = [...document.querySelectorAll('.modal-wrapper')];
+        const update = () => {
+            const open = modals.some(m => m.style.display !== 'none' && m.style.display !== '');
+            document.documentElement.classList.toggle('modal-open', open);
+        };
+        const observer = new MutationObserver(update);
+        modals.forEach(m => observer.observe(m, { attributes: true, attributeFilter: ['style'] }));
+        update();
+    }
+
+    // Aviso "O site está travando?: liga/desliga os efeitos visuais (guardado no navegador)
+    bindPerformanceTip() {
+        const btn = document.getElementById('btn-toggle-fx');
+        const text = document.getElementById('perf-tip-text');
+        if (!btn || !text) return;
+        const apply = off => {
+            document.documentElement.classList.toggle('no-fx', off);
+            text.textContent = off
+                ? 'Efeitos visuais desativados.'
+                : 'O site está travando? Tente ativar a aceleração de hardware do navegador ou';
+            btn.textContent = off
+                ? 'clique aqui para reativar'
+                : 'clique aqui para desativar os efeitos visuais da página';
+        };
+        let off = false;
+        try { off = localStorage.getItem('ordem_no_fx') === '1'; } catch (e) { /* sem storage */ }
+        apply(off);
+        btn.addEventListener('click', () => {
+            off = !off;
+            try { localStorage.setItem('ordem_no_fx', off ? '1' : '0'); } catch (e) { /* sem storage */ }
+            apply(off);
+        });
+    }
+
+    // Botão flutuante + modal de feedback / recomendação / bug (POST /api/feedback)
+    bindFeedbackModal() {
+        const fab = document.getElementById('btn-open-feedback');
+        const modal = document.getElementById('feedback-modal');
+        const form = document.getElementById('feedback-form');
+        if (!fab || !modal || !form) return;
+        const msg = document.getElementById('feedback-msg');
+        const contato = document.getElementById('feedback-contato');
+        const status = document.getElementById('feedback-status');
+        const submit = document.getElementById('feedback-submit');
+
+        const setStatus = (text, ok) => {
+            status.textContent = text;
+            status.className = 'feedback-status' + (text ? (ok ? ' ok' : ' erro') : '');
+        };
+        const close = () => { modal.style.display = 'none'; };
+
+        fab.addEventListener('click', () => {
+            sfx.playClick();
+            setStatus('', false);
+            modal.style.display = 'flex';
+            msg.focus();
+        });
+        document.getElementById('feedback-close-btn').addEventListener('click', () => { sfx.playClick(); close(); });
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display !== 'none') close(); });
+
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const mensagem = msg.value.trim();
+            if (mensagem.length < 5) return setStatus('Escreva pelo menos 5 caracteres.', false);
+            const tipo = form.querySelector('input[name="feedback-tipo"]:checked').value;
+            submit.disabled = true;
+            setStatus('Enviando...', true);
+            try {
+                const res = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tipo, mensagem, contato: contato.value.trim() })
+                });
+                if (res.ok) {
+                    msg.value = '';
+                    contato.value = '';
+                    setStatus('Mensagem enviada. Obrigado!', true);
+                    setTimeout(() => { if (status.classList.contains('ok')) close(); }, 1500);
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    setStatus(data.erro || 'Não foi possível enviar agora.', false);
+                }
+            } catch (err) {
+                setStatus('Sem conexão com o servidor. Tente de novo.', false);
+            }
+            submit.disabled = false;
+        });
+    }
+
     confirmQuit() {
         sfx.playClick();
         const msg = this.gameMode === 'infinite'

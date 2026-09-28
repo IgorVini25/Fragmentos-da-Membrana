@@ -353,6 +353,31 @@ revoke execute on function public.registrar_inicio(text) from public;
 
 
 -- ==========================================================================
+-- FEEDBACKS (botão "Feedback" do jogo: feedback, recomendação ou bug)
+-- Sem dados pessoais obrigatórios: o contato (e-mail/@) é opcional e informado pela pessoa.
+-- Leia pelo painel do Supabase (Table Editor > feedbacks).
+-- ==========================================================================
+create table if not exists public.feedbacks (
+    id        bigint generated always as identity primary key,
+    criado_em timestamptz not null default now(),
+    tipo      text not null check (tipo in ('feedback', 'recomendacao', 'bug')),
+    mensagem  text not null check (char_length(mensagem) between 5 and 2000),
+    contato   text check (contato is null or char_length(contato) <= 200)
+);
+alter table public.feedbacks enable row level security;
+
+create or replace function public.registrar_feedback(p_tipo text, p_mensagem text, p_contato text)
+returns void
+language sql
+set search_path = public
+as $$
+    insert into feedbacks (tipo, mensagem, contato) values (p_tipo, p_mensagem, p_contato);
+$$;
+
+revoke execute on function public.registrar_feedback(text, text, text) from public;
+
+
+-- ==========================================================================
 -- PERMISSÕES
 -- O Supabase dá acesso às tabelas e funções novas para as chaves públicas (anon/authenticated).
 -- O RLS sem policies já bloqueia os dados, mas aqui tiramos também as permissões:
@@ -363,7 +388,7 @@ begin
     if exists (select 1 from pg_roles where rolname = 'anon') then
         revoke all on table
             public.stats_diario, public.stats_diario_cenas, public.stats_episodios, public.stats_modos,
-            public.config, public.cenas_diario_ajustes, public.admin_login_falhas, public.stats_inicios
+            public.config, public.cenas_diario_ajustes, public.admin_login_falhas, public.stats_inicios, public.feedbacks
         from anon, authenticated;
 
         revoke execute on function public.registrar_partida(jsonb)               from anon, authenticated;
@@ -371,5 +396,6 @@ begin
         revoke execute on function public.registrar_falha_login(text)            from anon, authenticated;
         revoke execute on function public.limpar_falhas_login(text)              from anon, authenticated;
         revoke execute on function public.registrar_inicio(text)                 from anon, authenticated;
+        revoke execute on function public.registrar_feedback(text, text, text)   from anon, authenticated;
     end if;
 end $$;

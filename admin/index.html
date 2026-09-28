@@ -32,6 +32,7 @@
             </div>
             <div class="header-actions">
                 <button type="button" id="btn-open-stats" class="btn btn-ghost">Estatísticas</button>
+                <button type="button" id="btn-open-feedbacks" class="btn btn-ghost">Feedbacks</button>
                 <button type="button" id="btn-logout" class="btn btn-ghost">Sair</button>
             </div>
         </header>
@@ -85,6 +86,29 @@
                     <tbody id="stats-table-body"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal de Feedbacks enviados pelos jogadores -->
+    <div id="feedbacks-modal" class="modal-overlay" hidden>
+        <div class="card stats-modal-content">
+            <header class="stats-modal-header">
+                <h2>Feedbacks Recebidos</h2>
+                <button type="button" id="btn-close-feedbacks" class="btn btn-ghost" aria-label="Fechar">&times;</button>
+            </header>
+            <div class="stats-filters">
+                <label>Tipo
+                    <select id="feedbacks-type">
+                        <option value="">Todos</option>
+                        <option value="feedback">Feedback</option>
+                        <option value="recomendacao">Recomendação</option>
+                        <option value="bug">Bug</option>
+                    </select>
+                </label>
+                <span class="muted" id="feedbacks-count"></span>
+            </div>
+            <p class="form-error" id="feedbacks-error"></p>
+            <div class="feedbacks-list" id="feedbacks-list"></div>
         </div>
     </div>
 

@@ -129,6 +129,7 @@ textarea { width: 100%; resize: vertical; line-height: 1.45; }
 .context-status.dirty { color: var(--warn); }
 
 /* ---------- Modal de Estatísticas ---------- */
+:root:has(.modal-overlay:not([hidden])), body:has(.modal-overlay:not([hidden])) { overflow: hidden; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 100; }
 .stats-modal-content { width: 100%; max-width: 640px; max-height: min(80vh, 640px); display: flex; flex-direction: column; gap: 0.75rem; }
 .stats-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
@@ -137,6 +138,15 @@ textarea { width: 100%; resize: vertical; line-height: 1.45; }
 .stats-filters { display: flex; gap: 1rem; flex-wrap: wrap; }
 .stats-filters label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--muted); }
 
+.stats-filters select { background: rgba(255, 255, 255, 0.05); color: inherit; border: 1px solid var(--card-border); border-radius: 6px; padding: 0.3rem 0.5rem; font: inherit; }
+.feedbacks-list { overflow: auto; display: flex; flex-direction: column; gap: 0.6rem; }
+.feedback-item { border: 1px solid var(--card-border); border-radius: 8px; padding: 0.7rem 0.85rem; }
+.feedback-meta { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.4rem; }
+.feedback-tag { text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--card-border); }
+.feedback-tag.bug { color: #ef4444; border-color: #ef4444; }
+.feedback-tag.recomendacao { color: #4ade80; border-color: #4ade80; }
+.feedback-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.9rem; margin: 0; }
+.feedback-contact { font-size: 0.8rem; margin: 0.4rem 0 0; }
 .stats-table-wrap { overflow: auto; border: 1px solid var(--card-border); border-radius: 8px; }
 .stats-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .stats-table th, .stats-table td { padding: 0.5rem 0.75rem; text-align: center; white-space: nowrap; }

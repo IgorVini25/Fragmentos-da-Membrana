@@ -322,6 +322,16 @@ async function mountScenePlayer(video, scene, title) {
         playerVars: { start, end, autoplay: 1, controls: 0, disablekb: 1, fs: 0, rel: 0, iv_load_policy: 3, playsinline: 1 },
         events: {
             onReady: () => { player.getIframe().title = title; },
+            onError: (e) => {
+                stopWatcher();
+                // 101/150/152/153: o dono não permite tocar fora do YouTube (inclui vídeos com restrição de idade)
+                const bloqueado = [101, 150, 152, 153].includes(e.data);
+                overlay.hidden = true;
+                video.innerHTML = '';
+                video.append(makeEl('p', 'form-error', bloqueado
+                    ? 'Este vídeo não pode ser exibido aqui (restrição de idade ou incorporação bloqueada). Use o link "Abrir no YouTube" abaixo, logado na sua conta.'
+                    : `O YouTube não conseguiu carregar este vídeo (erro ${e.data}).`));
+            },
             onStateChange: (e) => {
                 if (e.data === YT.PlayerState.PLAYING) {
                     overlay.hidden = true;
@@ -541,6 +551,62 @@ el.statsModal.addEventListener('click', (e) => { if (e.target === el.statsModal)
 el.statsFrom.addEventListener('change', loadStats);
 el.statsTo.addEventListener('change', loadStats);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.statsModal.hidden) closeStatsModal(); });
+
+// ==========================================
+// Modal de Feedbacks (texto sempre via textContent: vem de jogadores)
+// ==========================================
+const fb = {
+    open: document.getElementById('btn-open-feedbacks'),
+    close: document.getElementById('btn-close-feedbacks'),
+    modal: document.getElementById('feedbacks-modal'),
+    type: document.getElementById('feedbacks-type'),
+    count: document.getElementById('feedbacks-count'),
+    error: document.getElementById('feedbacks-error'),
+    list: document.getElementById('feedbacks-list')
+};
+const FEEDBACK_LABELS = { feedback: 'Feedback', recomendacao: 'Recomendação', bug: 'Bug' };
+
+function makeEl(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+}
+
+async function loadFeedbacks() {
+    fb.error.textContent = '';
+    fb.count.textContent = '';
+    fb.list.replaceChildren(makeEl('p', 'muted', 'Carregando…'));
+    try {
+        const tipo = fb.type.value;
+        const result = await api('/api/admin/feedbacks' + (tipo ? `?tipo=${tipo}` : ''));
+        const items = result.feedbacks || [];
+        fb.count.textContent = items.length === 200 ? 'Mostrando os 200 mais recentes' : `${items.length} mensagem(ns)`;
+        if (items.length === 0) {
+            fb.list.replaceChildren(makeEl('p', 'muted', 'Nenhum feedback recebido ainda.'));
+            return;
+        }
+        fb.list.replaceChildren(...items.map(f => {
+            const item = makeEl('article', 'feedback-item');
+            const meta = makeEl('div', 'feedback-meta');
+            const tag = makeEl('span', 'feedback-tag ' + (FEEDBACK_LABELS[f.tipo] ? f.tipo : ''), FEEDBACK_LABELS[f.tipo] || f.tipo);
+            meta.append(tag, makeEl('span', '', new Date(f.criado_em).toLocaleString('pt-BR')));
+            item.append(meta, makeEl('p', 'feedback-text', f.mensagem));
+            if (f.contato) item.append(makeEl('p', 'feedback-contact muted', 'Contato: ' + f.contato));
+            return item;
+        }));
+    } catch (err) {
+        fb.error.textContent = err.message;
+        fb.list.replaceChildren();
+    }
+}
+
+function closeFeedbacksModal() { fb.modal.hidden = true; }
+fb.open.addEventListener('click', () => { fb.modal.hidden = false; loadFeedbacks(); });
+fb.close.addEventListener('click', closeFeedbacksModal);
+fb.modal.addEventListener('click', (e) => { if (e.target === fb.modal) closeFeedbacksModal(); });
+fb.type.addEventListener('change', loadFeedbacks);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !fb.modal.hidden) closeFeedbacksModal(); });
 
 // ==========================================
 // Início

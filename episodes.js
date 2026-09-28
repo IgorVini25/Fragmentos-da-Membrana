@@ -433,6 +433,15 @@ function randomStartSeconds(rand) {
  * o admin marca e a tentativa sobe: o episódio continua o mesmo e só o momento é sorteado
  * de novo pelo algoritmo secundário (semente "data|temporada|tentativa").
  */
+// Vídeos que o YouTube não deixa tocar fora dele (erro 150: restrição de idade / incorporação
+// bloqueada). O Diário nunca sorteia esses: pega o próximo episódio da mesma temporada, igual para
+// todo mundo e para o /admin. Para incluir mais, é só acrescentar o ID do vídeo aqui.
+const NON_EMBEDDABLE_IDS = [
+    'wiGlOf3mCVM', // O Segredo na Ilha - Ep. 2 "Praia"
+    '6yHpP3dsaws', // O Segredo na Ilha - Ep. 5 "Penhasco"
+    '-ucsTx0u4Lo'  // O Segredo na Ilha - Ep. 6 "Profecia"
+];
+
 function buildDailyScenes(dateStr, ajustes = {}) {
     const rand = seedRandom(dateStr);
     const scenes = [];
@@ -441,7 +450,10 @@ function buildDailyScenes(dateStr, ajustes = {}) {
         if (!item.db || item.db.length === 0) return;
 
         // Sempre consome o sorteio principal, para as outras temporadas do dia não mudarem
-        const idx = Math.floor(rand() * item.db.length);
+        let idx = Math.floor(rand() * item.db.length);
+        for (let i = 0; i < item.db.length && NON_EMBEDDABLE_IDS.includes(item.db[idx].youtubeId); i++) {
+            idx = (idx + 1) % item.db.length;
+        }
         let startSeconds = randomStartSeconds(rand);
 
         const ajuste = ajustes[item.id] || {};

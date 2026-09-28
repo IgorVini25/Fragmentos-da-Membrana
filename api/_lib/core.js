@@ -350,6 +350,41 @@ async function handleGameStart(req, res) {
     sendEmpty(res, r.ok ? 204 : (r.status === 503 ? 503 : 502));
 }
 
+// Feedback / recomendação / bug enviado pelo botão do jogo. Limite por IP reaproveitando a
+// tabela de falhas do login (chave própria, com hash do IP; a janela de 15 min fica no SQL).
+const FEEDBACK_TYPES = ['feedback', 'recomendacao', 'bug'];
+const FEEDBACK_MAX_PER_WINDOW = 5;
+async function handleFeedback(req, res) {
+    if (!requireMethod(req, res, 'POST')) return;
+    const body = await readJsonBody(req, 8 * 1024);
+    const tipo = body && body.tipo;
+    const mensagem = body && typeof body.mensagem === 'string' ? body.mensagem.trim() : '';
+    let contato = body && typeof body.contato === 'string' ? body.contato.trim() : '';
+    if (!FEEDBACK_TYPES.includes(tipo)) return sendJson(res, 400, { erro: 'Tipo inválido.' });
+    if (mensagem.length < 5 || mensagem.length > 2000) {
+        return sendJson(res, 400, { erro: 'A mensagem precisa ter entre 5 e 2000 caracteres.' });
+    }
+    if (contato.length > 200) return sendJson(res, 400, { erro: 'O contato pode ter no máximo 200 caracteres.' });
+
+    const env = readEnv();
+    const supa = getSupabaseEnv(env);
+    if (!supa) return sendJson(res, 503, { erro: 'Envio indisponível no momento.' });
+    const chave = crypto.createHmac('sha256', env.SUPABASE_SERVICE_ROLE_KEY).update('feedback|' + getClientIp(req)).digest('hex');
+    const usadas = await supabaseRequest('rpc/falhas_login', { method: 'POST', body: { p_chave: chave } });
+    if (!usadas.ok) return sendJson(res, 502, { erro: 'Não foi possível enviar agora. Tente de novo mais tarde.' });
+    if (usadas.data >= FEEDBACK_MAX_PER_WINDOW) {
+        return sendJson(res, 429, { erro: 'Você enviou muitas mensagens. Tente de novo em alguns minutos.' });
+    }
+
+    const r = await supabaseRequest('rpc/registrar_feedback', {
+        method: 'POST',
+        body: { p_tipo: tipo, p_mensagem: mensagem, p_contato: contato || null }
+    });
+    if (!r.ok) return sendJson(res, 502, { erro: 'Não foi possível enviar agora. Tente de novo mais tarde.' });
+    await supabaseRequest('rpc/registrar_falha_login', { method: 'POST', body: { p_chave: chave } });
+    sendJson(res, 200, { ok: true });
+}
+
 // Ajustes públicos de um dia do Diário (usados pelo jogo): { temporada: { tentativa, contexto } }
 async function handleDaily(req, res, dateStr) {
     if (!requireMethod(req, res, 'GET')) return;
@@ -575,6 +610,17 @@ async function handleAdminStats(req, res) {
     sendJson(res, 200, { dias });
 }
 
+// Feedbacks recebidos (mais recentes primeiro), com filtro opcional por tipo
+async function handleAdminFeedbacks(req, res) {
+    if (!requireMethod(req, res, 'GET') || !requireAdmin(req, res)) return;
+    const tipo = new URL(req.url, 'http://x').searchParams.get('tipo') || '';
+    if (tipo && !FEEDBACK_TYPES.includes(tipo)) return sendJson(res, 400, { erro: 'Tipo inválido.' });
+    const filtro = tipo ? `&tipo=eq.${tipo}` : '';
+    const r = await supabaseRequest(`feedbacks?select=id,criado_em,tipo,mensagem,contato&order=criado_em.desc&limit=200${filtro}`);
+    if (!r.ok) return supabaseError(res, r);
+    sendJson(res, 200, { feedbacks: r.data || [] });
+}
+
 // ==========================================
 // ROTEADOR (usado pelo server.js local; na Vercel cada rota é um arquivo em api/)
 // Retorna true se a requisição foi tratada.
@@ -584,6 +630,7 @@ async function handleRoutes(req, res, pathname) {
     if (pathname === '/config.js') await handleConfig(req, res);
     else if (pathname === '/api/stats') await handleStats(req, res);
     else if (pathname === '/api/game-start') await handleGameStart(req, res);
+    else if (pathname === '/api/feedback') await handleFeedback(req, res);
     else if ((match = pathname.match(/^\/api\/daily\/([^/]+)$/))) await handleDaily(req, res, match[1]);
     else if (pathname === '/api/global-stats') await handleGlobalStats(req, res);
     else if (pathname === '/api/admin/login') await handleAdminLogin(req, res);
@@ -591,6 +638,7 @@ async function handleRoutes(req, res, pathname) {
     else if (pathname === '/api/admin/cena') await handleAdminScene(req, res);
     else if (pathname === '/api/admin/data-inicio') await handleAdminStartDate(req, res);
     else if (pathname === '/api/admin/estatisticas') await handleAdminStats(req, res);
+    else if (pathname === '/api/admin/feedbacks') await handleAdminFeedbacks(req, res);
     else if (pathname.startsWith('/api/')) sendJson(res, 404, { erro: 'Rota não encontrada.' });
     else return false;
     return true;
@@ -620,11 +668,13 @@ module.exports = {
     handleConfig,
     handleStats,
     handleGameStart,
+    handleFeedback,
     handleDaily,
     handleGlobalStats,
     handleAdminLogin,
     handleAdminDay,
     handleAdminScene,
     handleAdminStartDate,
-    handleAdminStats
+    handleAdminStats,
+    handleAdminFeedbacks
 };

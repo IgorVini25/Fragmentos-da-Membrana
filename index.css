@@ -329,6 +329,30 @@ body::before {
     color: var(--color-theme-alt);
 }
 
+/* Link "Apoie o projeto" na tela inicial */
+.support-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 1rem;
+    padding: 0.6rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+.support-link .material-symbols-outlined {
+    font-size: 1.1rem;
+    color: #ef4444;
+}
+
+.support-link:hover {
+    color: var(--color-theme-alt);
+}
+
 /* Botão de texto solto direto numa tela (sem um wrapper .game-footer para centralizar) */
 #btn-quit-reveal {
     display: block;
@@ -1203,7 +1227,9 @@ body::before {
     top: 0;
     left: 0;
     width: 100%;
-    height: 10%; /* Oculta a barra de título do player do YouTube */
+    /* Oculta título e canal do YouTube. O bloco do título tem tamanho quase fixo em px (~40px visíveis
+       em telas pequenas), então em player pequeno 10% da altura não bastava. */
+    height: max(10%, 42px);
     background: #060509; /* Cor de fundo idêntica ao tema escuro */
     border-bottom: 2px solid var(--color-morte);
     z-index: 8; /* Fica acima do player (5) mas abaixo do signal-lost (10) e scanlines (15) */
@@ -1996,6 +2022,11 @@ body::before {
     text-shadow: 0 0 12px var(--color-morte-glow);
     margin-bottom: 0.5rem;
     letter-spacing: 2px;
+    overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+    .rank-badge { font-size: clamp(1.05rem, 6.2vw, 1.5rem); letter-spacing: 0.5px; }
+    .rank-container { padding: 1rem 0.75rem; }
 }
 
 .rank-desc {
@@ -2067,6 +2098,126 @@ body::before {
     background: rgba(255, 255, 255, 0.1);
     margin: 1rem 0;
 }
+
+/* Rodapé no fim da página (rola junto com o conteúdo, não é flutuante) */
+body { padding-bottom: 110px; }
+.page-footer {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+/* Aviso de desempenho (canto inferior esquerdo) */
+.perf-tip {
+    max-width: min(340px, calc(100vw - 120px));
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: rgba(15, 15, 18, 0.92);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+.perf-tip button {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--color-theme-alt);
+    text-decoration: underline;
+    cursor: pointer;
+}
+@media (max-width: 480px) {
+    .perf-tip { font-size: 0.7rem; padding: 0.5rem 0.65rem; }
+}
+
+/* Efeitos visuais desativados pelo jogador: sem animações, blur, sombras nem camadas decorativas */
+html.no-fx *, html.no-fx *::before, html.no-fx *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0s !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+html.no-fx #ambient-particles,
+html.no-fx .crt-scanlines,
+html.no-fx .static-noise,
+html.no-fx body::before { display: none !important; }
+
+html.modal-open, html.modal-open body { overflow: hidden; }
+
+/* Botão flutuante e modal de feedback */
+.feedback-fab {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: rgba(15, 15, 18, 0.92);
+    color: var(--text-muted);
+    font-family: var(--font-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.feedback-fab .material-symbols-outlined { font-size: 1.4rem; }
+.feedback-fab:hover { color: var(--color-theme-alt); border-color: var(--color-theme-alt); }
+@media (max-width: 480px) {
+    .feedback-fab { padding: 0.8rem; }
+    .feedback-fab-label { display: none; }
+}
+
+@media (max-width: 480px) {
+    #feedback-modal .modal-content { padding: 1.5rem 1rem !important; }
+    .feedback-types { gap: 0.35rem; }
+    .feedback-type span { font-size: 0.72rem; padding: 0.5rem 0.3rem; }
+    #feedback-modal .modal-title { font-size: 1.05rem; letter-spacing: 1px; padding-right: 1.25rem; }
+}
+.feedback-form { display: flex; flex-direction: column; gap: 0.75rem; text-align: left; }
+.feedback-types { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.feedback-type { flex: 1 1 auto; min-width: 0; cursor: pointer; }
+.feedback-type input { position: absolute; opacity: 0; pointer-events: none; }
+.feedback-type span {
+    display: block;
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+}
+.feedback-type input:checked + span { color: var(--text-main); border-color: var(--color-theme-alt); background: rgba(255, 255, 255, 0.06); }
+.feedback-type input:focus-visible + span { outline: 2px solid var(--color-theme-alt); }
+.feedback-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+.feedback-input:focus { outline: none; border-color: var(--color-theme-alt); }
+.feedback-status { min-height: 1.2em; margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+.feedback-status.ok { color: #4ade80; }
+.feedback-status.erro { color: #ef4444; }
 
 .modal-body {
     text-align: left;
