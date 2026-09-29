@@ -583,6 +583,7 @@ body::before {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(74, 222, 128, 0.05) !important;
 }
 
+.daily-mode-card .mode-badge:empty { visibility: hidden; }
 .daily-mode-card .mode-badge {
     position: absolute;
     top: 10px;
