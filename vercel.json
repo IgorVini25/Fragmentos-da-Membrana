@@ -3,6 +3,14 @@
   "buildCommand": "node scripts/build-public.js",
   "outputDirectory": "public",
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "fragmentos-da-membrana.vercel.app" }],
+      "destination": "https://www.fragmentosdamembrana.com.br/:path",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/config.js",

@@ -12,3 +12,10 @@ node_modules/
 extract_all.js
 ordem-paranormal-textos.json
 testes/
+
+# Vídeo de divulgação: só o código-fonte da animação fica no repositório
+divulgacao
+divulgacao/frames/
+divulgacao/preview/
+divulgacao/*.mp4
+divulgacao/*.wav
