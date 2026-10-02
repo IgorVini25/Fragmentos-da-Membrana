@@ -1864,6 +1864,14 @@ class OrdemSceneQuiz {
 
         this.currentTrack = this.gamePlaylist[this.currentRound - 1];
 
+        // Última cena do Diário: já busca a média geral enquanto o jogador responde, para a tela de
+        // resultados mostrá-la na hora (ver endGame)
+        if (this.gameMode === 'daily' && this.currentRound === this.totalRounds) {
+            const day = this.selectedDailyDate;
+            const pre = this.globalPrefetch = { day, done: false, data: null };
+            this.fetchGlobalStats(day).then(data => { pre.data = data; pre.done = true; });
+        }
+
         // A cena manda no visual: cada rodada assume a temporada da própria cena
         if (this.currentTrack && this.currentTrack.campaignId) {
             this.applyRoundCampaign(this.currentTrack.campaignId);
@@ -2320,9 +2328,18 @@ class OrdemSceneQuiz {
         const submitted = this.submitGlobalStats();
         if (this.gameMode === 'daily') {
             const dailyDateForStats = this.selectedDailyDate;
-            submitted.finally(() => {
-                this.renderGlobalStatsCaption(dailyDateForStats, 'global-stats-text');
-            });
+            const pre = this.globalPrefetch;
+            this.globalPrefetch = null;
+            if (pre && pre.day === dailyDateForStats && pre.done && pre.data && globalStatsEl) {
+                // Média já carregada na última cena: soma o resultado que acabou de ser enviado, igual ao banco
+                globalStatsEl.textContent = this.formatGlobalStatsText(this.withMyResult(pre.data, this.totalAcertos));
+                globalStatsEl.style.display = 'block';
+            } else {
+                // Sem a média pré-carregada (rede lenta ou sem banco): busca depois do envio, como antes
+                submitted.finally(() => {
+                    this.renderGlobalStatsCaption(dailyDateForStats, 'global-stats-text');
+                });
+            }
         }
 
         if (this.gameMode === 'infinite') {
@@ -2393,6 +2410,14 @@ class OrdemSceneQuiz {
         } catch (e) {
             return null;
         }
+    }
+
+    // Média do dia já contando o resultado do próprio jogador (o mesmo que o banco terá após o envio:
+    // media_acertos = round(soma de acertos / jogadores, 2))
+    withMyResult(data, acertos) {
+        const n = Number(data.jogadores) || 0;
+        const soma = Number.isFinite(Number(data.acertos)) ? Number(data.acertos) : Number(data.mediaAcertos) * n;
+        return { jogadores: n + 1, mediaAcertos: Math.round((soma + acertos) / (n + 1) * 100) / 100 };
     }
 
     // Número no padrão brasileiro (vírgula decimal), ex.: 3.4 -> "3,4"

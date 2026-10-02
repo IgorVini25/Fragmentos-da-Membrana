@@ -412,11 +412,12 @@ async function handleGlobalStats(req, res) {
     if (!requireMethod(req, res, 'GET')) return;
     const dia = new URL(req.url, 'http://x').searchParams.get('day') || '';
     if (!(await isDailyDateAllowed(dia))) return sendJson(res, 403, { erro: 'Dia indisponível.' });
-    const r = await supabaseRequest(`stats_diario?dia=eq.${dia}&select=jogadores,media_acertos`);
+    const r = await supabaseRequest(`stats_diario?dia=eq.${dia}&select=jogadores,acertos,media_acertos`);
     if (!r.ok) return supabaseError(res, r);
     const row = Array.isArray(r.data) ? r.data[0] : null;
     sendJson(res, 200, {
         jogadores: row ? Number(row.jogadores) : 0,
+        acertos: row ? Number(row.acertos) : 0, // soma exata: o jogo usa para incluir o próprio resultado na média sem erro de arredondamento
         mediaAcertos: row ? Number(row.media_acertos) : 0
     });
 }
